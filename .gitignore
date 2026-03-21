@@ -1,0 +1,19 @@
+node_modules
+dist
+coverage
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+.env
+.env.*
+bun.lockb
+
+# Agent/AI tool config — keep out of repo
+CLAUDE.md
+packages/*/CLAUDE.md
+apps/*/CLAUDE.md
+AGENTS.md
+.cursor/
+.claude/
+.codex/

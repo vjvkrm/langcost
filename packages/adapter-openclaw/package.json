@@ -1,0 +1,15 @@
+{
+  "name": "@langcost/adapter-openclaw",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@langcost/core": "workspace:*",
+    "@langcost/db": "workspace:*"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "langcost",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Cost intelligence and fault attribution for AI agent systems",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "test:core": "bun test packages/core",
+    "test:db": "bun test packages/db",
+    "lint": "bunx @biomejs/biome check .",
+    "format": "bunx @biomejs/biome format --write ."
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "agents",
+    "cost",
+    "optimization",
+    "observability",
+    "langfuse",
+    "langsmith",
+    "token",
+    "multi-agent"
+  ],
+  "author": "vjvkrm",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vjvkrm/langcost"
+  }
+}
