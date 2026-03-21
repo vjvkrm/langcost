@@ -1,143 +1,369 @@
-# langcost
+<h1 align="center">
+  <img src="apps/web/public/logo.svg" width="48" height="48" alt="langcost" valign="middle" />
+  &nbsp;
+  LangCost
+</h1>
 
-**Stop guessing where your AI budget goes. Start knowing.**
+<p align="center">
+  <strong>Cost intelligence for</strong>
+  &nbsp;
+  <a href="https://github.com/openclaw/openclaw">
+    <img src="apps/web/public/openclaw-logo-text-dark.svg" height="24" alt="OpenClaw" valign="middle" />
+  </a>
+  &nbsp;
+  <strong>agents</strong>
+  <br/><br/>
+  See where your tokens go. Find the waste. Fix it.
+</p>
 
-langcost is a cost intelligence and fault attribution engine for AI agent systems. It connects to your existing observability platform (Langfuse, LangSmith, OpenTelemetry) and tells you exactly where tokens are wasted, why pipelines fail, and what to fix first.
+<p align="center">
+  <a href="#quick-start"><img src="https://img.shields.io/badge/quick_start-▸-ff6b00?style=flat-square" alt="Quick Start" /></a>&nbsp;
+  <a href="#features"><img src="https://img.shields.io/badge/features-▸-ff6b00?style=flat-square" alt="Features" /></a>&nbsp;
+  <a href="#dashboard"><img src="https://img.shields.io/badge/dashboard-▸-ff6b00?style=flat-square" alt="Dashboard" /></a>&nbsp;
+  <a href="#cli-reference"><img src="https://img.shields.io/badge/CLI-▸-ff6b00?style=flat-square" alt="CLI" /></a>&nbsp;
+  <a href="#contributing"><img src="https://img.shields.io/badge/contributing-▸-ff6b00?style=flat-square" alt="Contributing" /></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/runtime-Bun-f472b6?style=flat-square&logo=bun&logoColor=fff" alt="Bun" />
+  <img src="https://img.shields.io/badge/lang-TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=fff" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/models-22_supported-43c78a?style=flat-square" alt="22 Models" />
+</p>
+
+<br/>
+
+<p align="center">
+  <img src="apps/web/public/dashboard.png" width="900" alt="LangCost Dashboard — trace explorer with cost intelligence" style="border-radius: 12px;" />
+</p>
+
+<br/>
 
 ---
 
-## The Problem
+<br/>
 
-AI agents in production are expensive and unreliable — and nobody can explain why.
+## Why LangCost?
 
-### Teams are flying blind on costs
+You run [OpenClaw](https://github.com/openclaw/openclaw) and your LLM bill keeps climbing — but you can't tell *why*.
 
-- **50-90% of enterprise LLM spending is eliminable** through optimization, but teams don't know where to cut. ([LeanLM](https://leanlm.ai/blog/llm-cost-optimization))
-- **80% of companies miss their AI cost forecasts by more than 25%.** Enterprise LLM API spending doubled in 6 months — $3.5B to $8.4B — and is projected to hit $15B by 2026.
-- A **30% token waste rate is typical**. On $10K/month spending, that's $3K/month burned on tokens that did nothing useful. ([Redis](https://redis.io/blog/llm-token-optimization-speed-up-apps/))
+The provider dashboard shows total tokens. It doesn't show that your agent **looped 12 times** on the same tool call, or that **30% of output tokens** were unnecessarily verbose, or that **prompt caching wasn't working**.
 
-### The waste is hidden in plain sight
-
-Observability tools like Langfuse and LangSmith tell you *how many* tokens each call used. They don't tell you *why*.
-
-A typical LLM call might use 12,400 input tokens. But what's actually in those tokens?
+LangCost reads your session logs and tells you exactly what's wasting money:
 
 ```
-system prompt:           2,100 tokens  (identical across last 6 calls)
-tool definitions:        4,200 tokens  (28 of 30 tools never called)
-conversation history:    3,400 tokens  (growing unbounded)
-RAG context:             1,800 tokens  (same chunk retrieved 3rd time)
-actual user query:         900 tokens
-                         ─────
-                        12,400 tokens → 7,200 are waste (58%)
+Scanned 12 sessions from openclaw
+├── 12 traces, 1,812 spans, 1,948 messages
+├── Total cost: $73.24
+├── Estimated waste: $8.60 (11.7%)
+└── Top waste: high_output (72.7%), tool_failure_waste (26.7%), low_cache (0.6%)
 ```
 
-Nobody sees this breakdown today. You get a single number per call and a monthly bill that keeps climbing.
+> **No API keys. No cloud. Everything runs locally. Your data never leaves your machine.**
 
-### Agent loops quietly drain budgets
-
-- A Reflexion loop running 10 cycles consumes **50x the tokens** of a single pass. An unconstrained agent can cost **$5-8 per task**. ([Adaline Labs](https://labs.adaline.ai/p/token-burnout-why-ai-costs-are-climbing))
-- Modern agentic workflows consume roughly **100x more tokens** than standard queries.
-- *"Agents are extremely good at burning through budgets, and get even better when unattended."* — [Hacker News](https://news.ycombinator.com/item?id=43998472)
-
-### Failures cascade invisibly
-
-Multi-agent pipelines don't fail cleanly. Step 4 throws the error, but the root cause was Agent 2 feeding it bad data three steps earlier.
-
-- If an agent achieves **85% accuracy per action**, a **10-step workflow only succeeds ~20% of the time** (0.85^10).
-- **89% of organizations** have some observability for agents, but only **62% have tracing** detailed enough to debug failures. ([LangChain State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering))
-- *"AI agents fail silently, loop endlessly, skip steps, and give wrong answers."* — [Vellum](https://www.vellum.ai/blog/understanding-your-agents-behavior-in-production)
-- *"Reading raw logs for a 15-step agent with nested sub-agents is painful."* — [Evil Martians](https://evilmartians.com/chronicles/debug-ai-fast-agent-prism-open-source-library-visualize-agent-traces)
+<br/>
 
 ---
 
-## What langcost Does
+<br/>
 
-langcost sits on top of your existing observability stack and answers two questions:
+## Quick Start
 
-> **"Where is the money going?"** and **"Where are failures coming from?"**
+**Three commands. That's it.**
 
-### Cost Intelligence
+```bash
+# Install
+bun add -g @langcost/cli @langcost/adapter-openclaw
 
-- **Token segmentation** — breaks down every LLM call into system prompt, tool schemas, conversation history, RAG context, and user query. Shows you what percentage of spend goes to each category.
-- **Waste detection** — identifies unused tool definitions sent on every call, duplicate RAG chunks retrieved multiple times, conversation history growing unbounded, and system prompts repeated without caching.
-- **Anomaly detection** — flags traces that cost significantly more than the session average and cost drift over time for the same workflow.
-- **Optimization recommendations** — actionable suggestions: trim these 12 unused tools, summarize history after 10 turns, deduplicate these chunks, switch this workflow to a cheaper model.
+# Scan your sessions
+langcost scan --source openclaw
 
-### Fault Attribution
+# Open the dashboard
+langcost dashboard
+```
 
-- **Root cause analysis** — when a multi-agent pipeline fails, traces the failure backwards to identify which agent actually caused it, not just which step errored.
-- **Failure cascade mapping** — shows that when Agent 2 fails, Agents 4 and 5 always fail downstream. Tells you where to invest reliability effort.
-- **Agent loop detection** — identifies cycles in agent graphs (A calls B calls A) and calculates the token cost of each loop.
-- **Retry pattern detection** — spots the same prompt sent repeatedly with slight variations, a sign of an agent struggling and burning tokens.
+LangCost auto-detects your OpenClaw installation at `~/.openclaw`, ingests your sessions, runs waste analysis, and serves a local dashboard at `http://localhost:3737`.
 
-### What langcost Is NOT
+<details>
+<summary><strong>More options</strong></summary>
 
-- **Not another observability platform.** Langfuse, LangSmith, and Arize do tracing. We don't replace them — we analyze the data they already collect.
-- **Not a token counter.** Your LLM provider already counts tokens. We classify and segment them to show where the waste is.
-- **Not a model router.** We tell you which workflows could use a cheaper model. The actual routing is your decision.
+```bash
+# Point to a custom OpenClaw directory
+langcost scan --source openclaw --path /path/to/openclaw
+
+# Analyze a single session file
+langcost scan --source openclaw --file /path/to/session.jsonl
+
+# Scan older sessions (default is last 30 days)
+langcost scan --source openclaw --since 90d
+
+# Force re-analysis of everything
+langcost scan --source openclaw --force
+```
+
+</details>
+
+<br/>
 
 ---
+
+<br/>
+
+## Features
+
+### 🔍 Waste Detection
+
+Six rules that automatically find wasted spend in every session:
+
+| | Rule | What it finds |
+|:---:|------|-------------|
+| 🔴 | **Tool Failures** | Failed tool calls that burned tokens for nothing — `bash: command not found`, 12 calls failed, **$1.65 wasted** |
+| 🟡 | **Agent Loops** | Agent stuck calling the same tools in a cycle — `read → bash → read → bash` repeated 8 times |
+| 🟡 | **Retry Patterns** | User re-prompting because the agent failed — 3 similar messages in a row, agent struggling |
+| 🟠 | **High Output** | Spans with output 3x+ the session average — one response used 4,200 tokens when peers averaged 380 |
+| 🟢 | **Low Cache** | Prompt caching disabled or underused — paying full input price on every call |
+| 🔵 | **Model Insight** | Flags expensive model usage — 100% Opus usage, helps you decide when cheaper models suffice |
+
+Every finding includes the **dollar amount wasted** and a **specific recommendation** to fix it.
+
+<br/>
+
+### 🔬 Trace Explorer
+
+Expand any session to see the full execution timeline — every LLM call and tool call in order:
+
+```
+#1   LLM   opus-4-5   in:2.8K  out:141   $0.017   ok
+ ├── read   README.md                                ok
+ └── read   src/main.ts                              ok
+#2   LLM   opus-4-5   in:5.2K  out:380   $0.083   ok
+ ├── bash   ls -la                                   ok
+ ├── write  src/fix.ts                               ok
+ └── bash   bun test                                 ✗ error
+#3   LLM   opus-4-5   in:8.1K  out:520   $0.130   ok
+ └── edit   src/fix.ts                               ok
+```
+
+Read exactly what the agent did, which tools it called, what failed, and what each step cost.
+
+<br/>
+
+### 📊 Dashboard
+
+A local web UI at `localhost:3737`:
+
+- **Trace table** — all sessions with cost, waste, status. Sortable and filterable.
+- **Expandable rows** — click to see waste findings + execution timeline inline
+- **Cost overview** — total spend, waste percentage, cost-over-time chart
+- **Model insights** — which models you're using and what they cost
+- **Recommendations** — prioritized list of what to fix first
+
+<br/>
+
+### 💻 CLI Reports
+
+```bash
+# All sessions sorted by cost
+langcost report --sort cost
+```
+
+```
+Trace                    │ Model    │   Cost │  Waste │ Status
+─────────────────────────┼──────────┼────────┼────────┼────────
+before-compaction        │ opus-4-5 │ $42.60 │  $6.03 │ error
+expensive-session        │ opus-4   │  $0.28 │  $0.11 │ ok
+simple-session           │ sonnet-4 │ $0.002 │ $0.001 │ ok
+```
+
+```bash
+# Deep dive into one session
+langcost report --trace <trace-id>
+
+# Only sessions with tool failures
+langcost report --category tool_failure_waste
+
+# JSON for scripting
+langcost report --format json
+```
+
+<br/>
+
+### 💰 22 Models Supported
+
+Built-in pricing for Anthropic, OpenAI, Google, DeepSeek, and Mistral:
+
+| Provider | Models |
+|----------|--------|
+| **Anthropic** | Opus 4, Sonnet 4, Haiku 4.5, Haiku 3.5 |
+| **OpenAI** | GPT-4.1, GPT-4.1-mini, GPT-4.1-nano, GPT-4o, GPT-4o-mini, o3, o3-mini, o4-mini |
+| **Google** | Gemini 2.5 Pro, 2.5 Flash, 2.0 Flash, 2.0 Flash Lite |
+| **DeepSeek** | V3 (chat), R1 (reasoner) |
+| **Mistral** | Large, Small, Codestral |
+
+Using a self-hosted or unlisted model? Costs show as $0 but all token counts and waste detection still work. Custom pricing support is coming soon.
+
+<br/>
+
+---
+
+<br/>
 
 ## How It Works
 
 ```
-Your Agent System
-      │
-      ▼
-  Langfuse / LangSmith / OTEL     ← traces + token counts (already collected)
-      │
-      ▼
-   langcost                        ← analyzes traces, segments tokens, maps failures
-      │
-      ▼
-  Dashboard + CLI Report           ← "here's what's wrong and how to fix it"
+  ~/.openclaw/sessions/*.jsonl
+         │
+         ▼
+    ┌─────────┐
+    │  ingest  │  Read JSONL → normalize to traces, spans, messages
+    └────┬────┘
+         ▼
+    ┌─────────┐
+    │ analyze  │  Run 6 waste detection rules
+    └────┬────┘
+         ▼
+    ┌─────────┐
+    │  store   │  SQLite at ~/.langcost/langcost.db
+    └────┬────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+  CLI      Dashboard
+ report   localhost:3737
 ```
 
-langcost connects to your existing observability platform via API, pulls trace data, and runs analyzers locally. No code changes to your agent system. No new SDK to install. No data leaves your machine (in self-hosted mode).
+- Everything runs **locally** — no cloud, no API keys, no tracking
+- Data stays in a **single SQLite file** on your machine
+- Keeps the **500 most recent sessions** to manage disk space
+- **Plugin architecture** — adapters handle data ingestion, analyzers handle intelligence
+
+<br/>
 
 ---
 
-## Who This Is For
+<br/>
 
-- **Engineering teams running AI agents in production** who got their first $10K+ LLM bill and thought *"where did that come from?"*
-- **Platform teams** responsible for AI infrastructure costs across multiple teams and workflows.
-- **Engineering managers** who need to answer *"what's our AI unit economics per customer?"*
-- **Anyone debugging multi-agent pipelines** who's tired of reading raw logs to figure out which agent broke the chain.
+## CLI Reference
+
+<details>
+<summary><code>langcost scan</code></summary>
+
+```
+langcost scan --source <adapter> [options]
+  --source <adapter>      Required. "openclaw"
+  --path <path>           Override data source path
+  --file <path>           Analyze a single session file
+  --since <duration>      Default: 30d. Accepts: 7d, 30d, 90d, all
+  --force                 Re-ingest and re-analyze everything
+  --db <path>             Override database path
+```
+
+</details>
+
+<details>
+<summary><code>langcost report</code></summary>
+
+```
+langcost report [options]
+  --format <fmt>          table (default) | json | markdown
+  --sort <field>          cost | waste | date
+  --limit <n>             Number of traces (default: 20)
+  --trace <id>            Detailed single-trace report
+  --category <cat>        Filter by waste category
+  --db <path>             Override database path
+```
+
+</details>
+
+<details>
+<summary><code>langcost dashboard</code></summary>
+
+```
+langcost dashboard [options]
+  --port <port>           Default: 3737
+  --db <path>             Override database path
+```
+
+</details>
+
+<details>
+<summary><code>langcost status</code></summary>
+
+```
+langcost status
+  --db <path>             Override database path
+```
+
+</details>
+
+<br/>
 
 ---
 
-## Real Pain Points We Solve
+<br/>
 
-| Pain Point | Who said it | What langcost does |
-|-----------|-------------|-------------------|
-| *"Costs skyrocketed to $20/day serving only 300 users"* | [OpenAI Forum](https://community.openai.com/t/sos-alarming-situation-of-excessive-billing-threatening-the-survival-of-my-company-ai-project-gpt/734483) | Shows exactly which part of your prompt is eating tokens |
-| *"Reasoning tokens count as output but the dashboard only shows input"* | [OpenAI Forum](https://community.openai.com/t/reasoning-tokens-hidden-price-question/1353099) | Full token breakdown by category, no hidden costs |
-| *"60-80% of costs come from 20-30% of use cases"* | [LeanLM](https://leanlm.ai/blog/llm-cost-optimization) | Identifies which workflows are over-spending and why |
-| *"90% of retrieval failures aren't due to the LLM but the data"* | [Hacker News](https://news.ycombinator.com/item?id=46384230) | Detects duplicate chunks, context overload, and retrieval waste |
-| *"An extra call inside a loop can multiply your cost without anyone noticing"* | [Dev.to](https://dev.to/clickit_devops/whats-actually-making-your-llm-costs-skyrocket-3039) | Detects agent loops and calculates their token burn |
-| *"AI agents fail in production because of infrastructure, not models"* | [RoboRhythms](https://www.roborhythms.com/why-ai-agents-fail-in-production/) | Fault attribution traces failures to the actual root cause agent |
+## Upcoming
 
----
+| | Feature | Description |
+|:---:|---------|-------------|
+| 🧭 | **Fault Attribution** | Trace failures backwards to find the root cause — not just which step errored, but which upstream agent caused it |
+| 🧩 | **More Waste Rules** | Unused tool schemas, duplicate RAG chunks, unbounded conversation history, uncached system prompts |
+| 🔌 | **More Adapters** | Pluggable data sources beyond OpenClaw — bring your own traces |
+| 🏷️ | **Custom Model Pricing** | Set input/output/cache prices for self-hosted and unlisted models |
 
-## Project Status
-
-langcost is in active development. Coming soon:
-
-- [ ] Core analyzers (cost segmentation, waste detection)
-- [ ] Langfuse adapter
-- [ ] CLI with terminal reports
-- [ ] Dashboard UI
-- [ ] LangSmith adapter
-- [ ] OTEL adapter
-- [ ] Fault attribution engine
+<br/>
 
 ---
 
-## License
+<br/>
 
-AGPL-3.0
+## Contributing
+
+LangCost has a plugin architecture. Three easy ways to contribute:
+
+> **🧩 Add a waste rule** — standalone function in `packages/analyzers/src/rules/`. Copy an existing rule as a starting point.
+
+> **💲 Update model pricing** — edit `packages/core/src/pricing/providers.ts`. Add new models or fix outdated prices.
+
+> **🔌 Build an adapter** — npm package implementing `IAdapter` from `@langcost/core`. The CLI discovers it automatically.
+
+<br/>
 
 ---
 
-**Built by [vjvkrm](https://github.com/vjvkrm)**
+<br/>
+
+## Tech Stack
+
+<table>
+  <tr>
+    <td><strong>Runtime</strong></td>
+    <td><a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-f472b6?style=flat-square&logo=bun&logoColor=fff" alt="Bun" /></a></td>
+  </tr>
+  <tr>
+    <td><strong>Language</strong></td>
+    <td><a href="https://typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=fff" alt="TypeScript" /></a></td>
+  </tr>
+  <tr>
+    <td><strong>Database</strong></td>
+    <td>SQLite (bun:sqlite + Drizzle ORM)</td>
+  </tr>
+  <tr>
+    <td><strong>API</strong></td>
+    <td><a href="https://hono.dev"><img src="https://img.shields.io/badge/Hono-e36002?style=flat-square&logo=hono&logoColor=fff" alt="Hono" /></a></td>
+  </tr>
+  <tr>
+    <td><strong>Dashboard</strong></td>
+    <td><a href="https://react.dev"><img src="https://img.shields.io/badge/React-61dafb?style=flat-square&logo=react&logoColor=000" alt="React" /></a> + Vite + Tailwind + Recharts</td>
+  </tr>
+</table>
+
+<br/>
+
+---
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License" />
+  &nbsp;&nbsp;
+  Built by <a href="https://github.com/vjvkrm"><strong>vjvkrm</strong></a>
+</p>
