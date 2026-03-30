@@ -1,5 +1,5 @@
 {
-  "name": "langcost",
+  "name": "langcost-monorepo",
   "private": true,
   "version": "0.1.0",
   "description": "Cost intelligence and fault attribution for AI agent systems",

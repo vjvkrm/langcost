@@ -48,7 +48,7 @@ function createTempDbPath(): string {
   return join(directory, "langcost.db");
 }
 
-describe("@langcost/cli", () => {
+describe("langcost", () => {
   it("parses shorthand scan args", () => {
     const parsed = parseArgv(["--source", "openclaw"]);
 

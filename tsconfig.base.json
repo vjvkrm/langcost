@@ -11,7 +11,7 @@
       "@langcost/db": ["packages/db/src/index.ts"],
       "@langcost/analyzers": ["packages/analyzers/src/index.ts"],
       "@langcost/adapter-openclaw": ["packages/adapter-openclaw/src/index.ts"],
-      "@langcost/cli": ["packages/cli/src/index.ts"],
+      "langcost": ["packages/cli/src/index.ts"],
       "@langcost/api": ["apps/api/src/index.ts"]
     },
     "types": ["bun", "node"],

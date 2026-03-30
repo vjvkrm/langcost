@@ -72,8 +72,9 @@ Scanned 12 sessions from openclaw
 **Three commands. That's it.**
 
 ```bash
-# Install
-bun add -g @langcost/cli @langcost/adapter-openclaw
+# Install the CLI + the OpenClaw adapter
+npm install -g langcost @langcost/adapter-openclaw
+# or: bun add -g langcost @langcost/adapter-openclaw
 
 # Scan your sessions
 langcost scan --source openclaw
@@ -81,6 +82,8 @@ langcost scan --source openclaw
 # Open the dashboard
 langcost dashboard
 ```
+
+> **Why two packages?** `langcost` is the core CLI — analysis engine, dashboard, and reports. Adapters are plugins that read data from specific sources. You install only the adapters you need. Right now OpenClaw is the only adapter — more are coming.
 
 LangCost auto-detects your OpenClaw installation at `~/.openclaw`, ingests your sessions, runs waste analysis, and serves a local dashboard at `http://localhost:3737`.
 
