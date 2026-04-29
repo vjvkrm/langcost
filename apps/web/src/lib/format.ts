@@ -136,7 +136,6 @@ export function formatCategoryLabel(category: string): string {
   }
 }
 
-
 export function statusClasses(status: TraceStatus | "ok"): string {
   switch (status) {
     case "error":
