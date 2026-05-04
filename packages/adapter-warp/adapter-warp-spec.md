@@ -1,6 +1,6 @@
 # Spec: `@langcost/adapter-warp`
 
-**Status:** Draft — v2 (updated after deeper investigation)  
+**Status:** Draft — v3 (updated after second investigation round)  
 **Date:** 2026-05-04  
 **Author:** Amirault
 
@@ -113,7 +113,7 @@ One row per exchange (a single user prompt → assistant response cycle).
 | `conversation_id` | TEXT | FK → `agent_conversations.conversation_id` |
 | `start_ts` | DATETIME | Timestamp of the LLM request |
 | `input` | TEXT | JSON array — the full prompt: user query + all context (see below) |
-| `output_status` | TEXT | `"Completed"`, presumably also error states |
+| `output_status` | TEXT | JSON-quoted string: `"\"Completed\""`, `"\"Cancelled\""`, or `"\"Failed\""` |
 | `model_id` | TEXT | Model ID (e.g., `"claude-4-6-sonnet-high"`) |
 | `planning_model_id` | TEXT | Usually empty |
 | `coding_model_id` | TEXT | Usually empty |
@@ -171,6 +171,13 @@ Key findings:
   and `apply_file_diff` are not persisted. In a typical Warp session, `run_command` accounts for
   the majority of tool calls (e.g., 13 run_command vs 3 read_files observed). Coverage varies by
   workflow.
+- **Subagent tasks**: `blocks.ai_metadata.subagent_task_id` links to `agent_tasks` for blocks
+  executed within subagent context. These are still tool calls within the parent conversation —
+  `agent_tasks.task_id` values are NOT `agent_conversations` IDs. No separate trace hierarchy is
+  needed; subagent blocks are attributed to their parent conversation like any other block.
+- **ANSI encoding**: `stylized_command` and `stylized_output` use character-by-character ANSI
+  bold/reset sequences (e.g., `\x1b[1mA\x1b[0m\x1b[1mb\x1b[0m` for `Ab`). Standard CSI
+  stripping (`\x1b\[[0-9;]*m`) fully recovers readable text.
 
 ---
 
@@ -213,7 +220,7 @@ Key findings:
 | `inputTokens` | Estimated — see token estimation strategy below |
 | `outputTokens` | Estimated — see token estimation strategy below |
 | `costUsd` | Estimated — see token estimation strategy below |
-| `status` | `"ok"` if `output_status = "Completed"`, else `"error"` |
+| `status` | `"ok"` if `output_status = "\"Completed\""`, `"error"` if `"\"Failed\""`, `"partial"` if `"\"Cancelled\""` |
 
 ### Span (tool call) fields
 
@@ -244,21 +251,35 @@ yields per-span estimates consistent with the conversation ground truth.
 `estimateTokenCount(JSON.stringify(input))` — already available in `@langcost/core` — gives a
 reasonable per-exchange input token estimate.
 
-**Signal 2 — Conversation-level normalization:**  
-`conversation_data.token_usage` provides the exact total token count per model per conversation.
-After estimating all exchanges, scale the estimates so they sum to the known total:
+**Signal 2 — Agent-only conversation normalization:**  
+`conversation_data.token_usage` provides token counts per model per conversation. However, **not
+all token categories belong to the Oz agent**. Investigation shows two distinct categories:
+
+| Category | Model | Source | In `ai_queries`? |
+|---|---|---|---|
+| `primary_agent` | Sonnet (or primary model) | Oz agent conversation | ✅ Yes |
+| `full_terminal_use` | Haiku | Warp inline terminal AI | ❌ Never |
+
+Haiku `full_terminal_use` tokens represent Warp's background terminal features (autocomplete,
+inline suggestions). They are never recorded as exchanges in `ai_queries` and must be **excluded
+from the normalization denominator**. Including them would inflate the per-span estimates.
+
+Correct normalization:
 
 ```
-estimated[i]    = estimateTokenCount(JSON.stringify(exchange[i].input))
-total_estimated = sum(estimated)
-actual_total    = sum(token_usage[*].byok_tokens + warp_tokens)
+estimated[i]       = estimateTokenCount(JSON.stringify(exchange[i].input))
+total_estimated    = sum(estimated)
+agent_total        = sum(token_usage[j].byok_tokens + warp_tokens
+                        where token_usage[j] has 'primary_agent' in byok_token_usage_by_category
+                             OR warp_token_usage_by_category)
 
-scaled_tokens[i] = estimated[i] × (actual_total / total_estimated)
+scaled_tokens[i]   = estimated[i] × (agent_total / total_estimated)
 ```
 
-The scaled estimate is proportionally honest: exchanges with larger prompts receive more tokens.
-All per-span estimates sum exactly to the conversation actual total. Cost is then computed via
-`calculateCost(model, scaled_tokens[i], 0)` (input-only, since output is unavailable).
+The `full_terminal_use` tokens are still recorded on the `Trace` as part of `totalInputTokens`
+(for accurate total cost reporting) but are excluded from per-span distribution.
+
+Per-span cost: `calculateCost(model, scaled_tokens[i], 0)` (input-only; output split unavailable).
 
 **Limitation:** Input and output tokens are not separable. All scaled tokens are treated as input
 for cost purposes, which over-estimates input cost and under-estimates output cost. The aggregate
@@ -480,15 +501,12 @@ Warp's source has no file hash or byte offset to compare. Use `last_modified_at`
 
 ## Open Questions
 
-1. **What does `output_status` look like for failed exchanges?** Only `"Completed"` has been
-   observed. The error value(s) determine how `status = "error"` is set on llm spans.
-
-2. **Warp Stable vs Preview?** Warp Preview uses bundle ID `dev.warp.Warp-Preview`. Should the
+1. **Warp Stable vs Preview?** Warp Preview uses bundle ID `dev.warp.Warp-Preview`. Should the
    adapter auto-detect both databases or require a `--channel` flag?
 
-3. **Token category semantics:** The `byok_token_usage_by_category` categories (`"primary_agent"`,
-   `"full_terminal_use"`) may distinguish model roles or usage contexts. If Warp clarifies the
-   semantics, these could improve input/output token attribution.
+2. **Are there other `byok_token_usage_by_category` values?** Only `primary_agent` and
+   `full_terminal_use` have been observed. Additional categories (e.g., from future Warp features)
+   could require updates to the normalization filter.
 
 ---
 
