@@ -5,6 +5,7 @@ import type {
   WarpBlockRow,
   WarpConversationRow,
   WarpQueryRow,
+  WarpTokenUsageEntry,
 } from "../src/types";
 
 // ── Builders ──
@@ -35,6 +36,35 @@ function aConversation(overrides?: Partial<WarpConversationRow>): WarpConversati
     last_modified_at: "2026-03-20 10:00:10",
     ...overrides,
   };
+}
+
+function aTokenUsage(overrides?: Partial<WarpTokenUsageEntry>): WarpTokenUsageEntry {
+  return {
+    model_id: "Claude Sonnet 4.6",
+    warp_tokens: 0,
+    byok_tokens: 1000,
+    warp_token_usage_by_category: {},
+    byok_token_usage_by_category: { primary_agent: 1000 },
+    ...overrides,
+  };
+}
+
+function aConversationWithUsage(
+  tokenUsage: WarpTokenUsageEntry[],
+  creditsSpent = 0,
+): WarpConversationRow {
+  return aConversation({
+    conversation_data: JSON.stringify({
+      run_id: "run-1",
+      conversation_usage_metadata: {
+        credits_spent: creditsSpent,
+        context_window_usage: 0.05,
+        was_summarized: false,
+        token_usage: tokenUsage,
+        tool_usage_metadata: { run_command_stats: { count: 1 } },
+      },
+    }),
+  });
 }
 
 function anExchange(overrides?: Partial<WarpQueryRow>): WarpQueryRow {
@@ -163,6 +193,80 @@ describe("normalizeConversation", () => {
       expect(result.trace.source).toBe("warp");
       expect(result.trace.totalInputTokens).toBe(0);
     });
+
+    it("computes credit and API comparator costs for Warp-billed sessions", () => {
+      const { trace } = normalizeConversation(
+        aConversationWithUsage(
+          [
+            aTokenUsage({
+              warp_tokens: 1000,
+              byok_tokens: 0,
+              warp_token_usage_by_category: { primary_agent: 1000 },
+              byok_token_usage_by_category: {},
+            }),
+          ],
+          1,
+        ),
+        [anExchange()],
+        [],
+      );
+
+      expect(trace.totalCostUsd).toBeCloseTo(0.012, 8);
+      expect(trace.metadata?.creditCostUsd).toBeCloseTo(0.012, 8);
+      expect(trace.metadata?.apiCostUsd).toBeCloseTo(0.003, 8);
+      expect(trace.metadata?.costMarkupPct).toBeCloseTo(300, 8);
+      expect(trace.metadata?.billingMode).toBe("credit");
+    });
+
+    it("charges only API-equivalent cost for BYOK-only sessions", () => {
+      const { trace } = normalizeConversation(
+        aConversationWithUsage(
+          [
+            aTokenUsage({
+              warp_tokens: 0,
+              byok_tokens: 2000,
+              warp_token_usage_by_category: {},
+              byok_token_usage_by_category: { primary_agent: 2000 },
+            }),
+          ],
+          0,
+        ),
+        [anExchange()],
+        [],
+      );
+
+      expect(trace.totalCostUsd).toBeCloseTo(0.006, 8);
+      expect(trace.metadata?.creditCostUsd).toBe(0);
+      expect(trace.metadata?.apiCostUsd).toBeCloseTo(0.006, 8);
+      expect(trace.metadata?.costMarkupPct).toBeCloseTo(0, 8);
+      expect(trace.metadata?.billingMode).toBe("byok");
+    });
+
+    it("uses selected warp plan rate for mixed Warp and BYOK sessions", () => {
+      const { trace } = normalizeConversation(
+        aConversationWithUsage(
+          [
+            aTokenUsage({
+              warp_tokens: 1000,
+              byok_tokens: 2000,
+              warp_token_usage_by_category: { primary_agent: 1000 },
+              byok_token_usage_by_category: { primary_agent: 2000 },
+            }),
+          ],
+          1,
+        ),
+        [anExchange()],
+        [],
+        { warpPlan: "business" },
+      );
+
+      expect(trace.metadata?.effectiveCreditRateUsd).toBeCloseTo(0.03, 8);
+      expect(trace.metadata?.creditCostUsd).toBeCloseTo(0.03, 8);
+      expect(trace.metadata?.apiCostUsd).toBeCloseTo(0.009, 8);
+      expect(trace.totalCostUsd).toBeCloseTo(0.036, 8);
+      expect(trace.metadata?.costMarkupPct).toBeCloseTo(300, 8);
+      expect(trace.metadata?.billingMode).toBe("mixed");
+    });
   });
 
   describe("LLM spans", () => {
@@ -231,13 +335,13 @@ describe("normalizeConversation", () => {
       expect(spans.find((s) => s.type === "llm")?.status).toBe("error");
     });
 
-    it("marks span partial for Cancelled — JSON-quoted value", () => {
+    it("maps Cancelled exchange spans to ok while trace remains partial", () => {
       const { spans } = normalizeConversation(
         aConversation(),
         [anExchange({ output_status: '"Cancelled"' })],
         [],
       );
-      expect(spans.find((s) => s.type === "llm")?.status).toBe("partial");
+      expect(spans.find((s) => s.type === "llm")?.status).toBe("ok");
     });
 
     it("marks span ok for Completed — plain (non-quoted) value (defensive)", () => {

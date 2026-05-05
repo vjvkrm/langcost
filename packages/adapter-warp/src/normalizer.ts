@@ -2,6 +2,7 @@ import { calculateCost, estimateTokenCount, findPricing } from "@langcost/core";
 import type { MessageRecord, SpanRecord, TraceRecord } from "@langcost/db";
 
 import { normalizeModelId } from "./model-map";
+import { resolveWarpCreditRateUsd } from "./pricing";
 import { estimateSpanTokens } from "./token-estimator";
 import type {
   WarpBlockMetadata,
@@ -104,9 +105,51 @@ function messageId(spanId: string, position: number): string {
 }
 
 // ── Token / cost helpers ──
+type TokenKind = "all" | "warp" | "byok";
+type WarpBillingMode = "credit" | "byok" | "mixed" | "unknown";
 
-function totalTokensAllModels(entries: WarpTokenUsageEntry[]): number {
-  return entries.reduce((sum, e) => sum + (e.byok_tokens ?? 0) + (e.warp_tokens ?? 0), 0);
+function tokensByKind(entry: WarpTokenUsageEntry, kind: TokenKind): number {
+  if (kind === "warp") {
+    return entry.warp_tokens ?? 0;
+  }
+
+  if (kind === "byok") {
+    return entry.byok_tokens ?? 0;
+  }
+
+  return (entry.warp_tokens ?? 0) + (entry.byok_tokens ?? 0);
+}
+
+function totalTokensByKind(entries: WarpTokenUsageEntry[], kind: TokenKind): number {
+  return entries.reduce((sum, entry) => sum + tokensByKind(entry, kind), 0);
+}
+
+function calculateEquivalentApiCostUsd(entries: WarpTokenUsageEntry[], kind: TokenKind): number {
+  return entries.reduce((sum, entry) => {
+    const tokenCount = tokensByKind(entry, kind);
+    if (tokenCount <= 0) {
+      return sum;
+    }
+
+    const model = normalizeModelId(entry.model_id);
+    return sum + calculateCost(model, tokenCount, 0).totalCost;
+  }, 0);
+}
+
+function resolveBillingMode(totalWarpTokens: number, totalByokTokens: number): WarpBillingMode {
+  if (totalWarpTokens > 0 && totalByokTokens > 0) {
+    return "mixed";
+  }
+
+  if (totalWarpTokens > 0) {
+    return "credit";
+  }
+
+  if (totalByokTokens > 0) {
+    return "byok";
+  }
+
+  return "unknown";
 }
 
 function primaryModel(entries: WarpTokenUsageEntry[]): string | undefined {
@@ -151,10 +194,15 @@ function attributeBlockToExchange(
 
 // ── Main normalizer ──
 
+export interface NormalizeConversationOptions {
+  warpPlan?: string;
+}
+
 export function normalizeConversation(
   conv: WarpConversationRow,
   exchanges: WarpQueryRow[],
   blocks: WarpBlockRow[],
+  options: NormalizeConversationOptions = {},
 ): NormalizedConversation {
   const tid = traceId(conv.conversation_id);
   const spans: SpanRecord[] = [];
@@ -167,12 +215,19 @@ export function normalizeConversation(
 
   const usageMeta = convData.conversation_usage_metadata ?? {};
   const tokenUsage = usageMeta.token_usage ?? [];
-  const totalTokens = totalTokensAllModels(tokenUsage);
+  const totalTokens = totalTokensByKind(tokenUsage, "all");
+  const totalWarpTokens = totalTokensByKind(tokenUsage, "warp");
+  const totalByokTokens = totalTokensByKind(tokenUsage, "byok");
   const dominantModel = primaryModel(tokenUsage);
   const creditsSpent = usageMeta.credits_spent ?? 0;
-  const totalCostUsd = dominantModel
-    ? calculateCost(normalizeModelId(dominantModel), totalTokens, 0).totalCost
-    : 0;
+  const { warpPlan, effectiveCreditRateUsd } = resolveWarpCreditRateUsd(options.warpPlan);
+  const creditCostUsd = totalWarpTokens > 0 ? creditsSpent * effectiveCreditRateUsd : 0;
+  const byokApiCostUsd = calculateEquivalentApiCostUsd(tokenUsage, "byok");
+  const apiCostUsd = calculateEquivalentApiCostUsd(tokenUsage, "all");
+  const totalCostUsd = creditCostUsd + byokApiCostUsd;
+  const costMarkupPct =
+    apiCostUsd > 0 ? ((totalCostUsd - apiCostUsd) / apiCostUsd) * 100 : null;
+  const billingMode = resolveBillingMode(totalWarpTokens, totalByokTokens);
 
   const tokenEstimates = estimateSpanTokens(exchanges, usageMeta);
   const tokenEstimateMap = new Map(tokenEstimates.map((e) => [e.exchangeId, e]));
@@ -195,16 +250,16 @@ export function normalizeConversation(
   for (const ex of exchanges) {
     const spanId = llmSpanId(conv.conversation_id, ex.exchange_id);
     const startedAt = parseTs(ex.start_ts) ?? new Date(conv.last_modified_at);
-    const status = parseOutputStatus(ex.output_status);
+    const outputStatus = parseOutputStatus(ex.output_status);
+    const status = outputStatus === "partial" ? "ok" : outputStatus;
     const model = normalizeModelId(ex.model_id);
     const tokens = tokenEstimateMap.get(ex.exchange_id);
     const inputTokens = tokens?.inputTokens ?? 0;
     const outputTokens = tokens?.outputTokens ?? 0;
     const costUsd = calculateCost(model, inputTokens, outputTokens).totalCost;
     const provider = findPricing(model)?.provider ?? null;
-
-    if (status === "error") hasError = true;
-    if (status === "partial") hasPartial = true;
+    if (outputStatus === "error") hasError = true;
+    if (outputStatus === "partial") hasPartial = true;
 
     spans.push({
       id: spanId,
@@ -226,7 +281,7 @@ export function normalizeConversation(
       toolOutput: null,
       toolSuccess: null,
       status,
-      errorMessage: status === "error" ? `output_status: ${ex.output_status}` : null,
+      errorMessage: outputStatus === "error" ? `output_status: ${ex.output_status}` : null,
       metadata: {
         estimatedTokens: true,
         workingDirectory: ex.working_directory ?? null,
@@ -341,6 +396,13 @@ export function normalizeConversation(
     metadata: {
       creditsSpent,
       estimatedCost: true,
+      warpPlan,
+      effectiveCreditRateUsd,
+      billingMode,
+      creditCostUsd,
+      byokApiCostUsd,
+      apiCostUsd,
+      costMarkupPct,
       toolUsageMetadata: usageMeta.tool_usage_metadata ?? null,
       wasSummarized: usageMeta.was_summarized ?? false,
       contextWindowUsage: usageMeta.context_window_usage ?? null,

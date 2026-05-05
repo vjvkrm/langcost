@@ -96,6 +96,8 @@ langcost scan --source claude-code --file /path/to/session.jsonl
 
 # Scan older sessions (default is last 30 days)
 langcost scan --source claude-code --since 90d
+# For Warp scans, choose credit-rate assumptions for arbitrage reporting
+langcost scan --source warp --warp-plan business
 
 # Force re-analysis of everything
 langcost scan --source claude-code --force
@@ -288,6 +290,7 @@ langcost scan --source <adapter> [options]
   --source <adapter>      Required. e.g. "claude-code", "openclaw"
   --path <path>           Override data source path
   --file <path>           Analyze a single session file
+  --warp-plan <plan>      Warp-only: build | business | add-on-low | add-on-high | byok
   --since <duration>      Default: 30d. Accepts: 7d, 30d, 90d, all
   --force                 Re-ingest and re-analyze everything
   --db <path>             Override database path

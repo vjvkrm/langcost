@@ -6,10 +6,11 @@ import {
   createWasteReportRepository,
   getSqliteClient,
   migrate,
+  type TraceRecord,
 } from "@langcost/db";
 
 import { createPalette } from "../output/colors";
-import { formatCurrency, formatDateTime, pluralize } from "../output/summary";
+import { formatCurrency, formatDateTime, formatPercent, pluralize } from "../output/summary";
 import { renderMarkdownTable, renderTable, type TableColumn } from "../output/table";
 import type { CliRuntime, ReportCommandOptions } from "../types";
 
@@ -26,6 +27,35 @@ function formatReportRows(
     default:
       return renderTable(columns, rows);
   }
+}
+
+function getNumberMetadataField(
+  metadata: Record<string, unknown> | undefined,
+  fieldName: string,
+): number | null {
+  const value = metadata?.[fieldName];
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+  return value;
+}
+
+function formatWarpArbitrage(trace: TraceRecord): string | null {
+  if (trace.source !== "warp") {
+    return null;
+  }
+
+  const metadata = trace.metadata as Record<string, unknown> | undefined;
+  const apiCostUsd = getNumberMetadataField(metadata, "apiCostUsd");
+  if (apiCostUsd === null || apiCostUsd <= 0) {
+    return null;
+  }
+
+  const markupPct = ((trace.totalCostUsd - apiCostUsd) / apiCostUsd) * 100;
+  const direction = markupPct >= 0 ? "higher" : "lower";
+  return `Warp arbitrage: paid ${formatCurrency(trace.totalCostUsd)} vs API-equivalent ${formatCurrency(
+    apiCostUsd,
+  )} (${formatPercent(Math.abs(markupPct))} ${direction})`;
 }
 
 export async function runReportCommand(
@@ -90,11 +120,13 @@ export async function runReportCommand(
         waste: formatCurrency(report.wastedCostUsd),
         recommendation: report.recommendation,
       }));
+      const warpArbitrage = formatWarpArbitrage(trace);
 
       const sections = [
         `${palette.bold("Trace")} ${trace.id}`,
         `Started: ${formatDateTime(trace.startedAt)}`,
         `Cost: ${formatCurrency(trace.totalCostUsd)}`,
+        ...(warpArbitrage ? [warpArbitrage] : []),
         `Status: ${trace.status}`,
         "",
         `${palette.bold("Spans")} (${pluralize(spans.length, "span")})`,

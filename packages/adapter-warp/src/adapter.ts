@@ -115,7 +115,12 @@ export const warpAdapter: IAdapter<Db> = {
       try {
         const exchanges = queriesByConv.get(conv.conversation_id) ?? [];
         const blocks = blocksByConv.get(conv.conversation_id) ?? [];
-        const normalized = normalizeConversation(conv, exchanges, blocks);
+        const normalized = normalizeConversation(
+          conv,
+          exchanges,
+          blocks,
+          options?.warpPlan ? { warpPlan: options.warpPlan } : {},
+        );
 
         options?.onProgress?.({
           phase: "writing",

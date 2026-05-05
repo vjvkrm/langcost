@@ -10,6 +10,7 @@ const HELP_TEXT = `langcost scan --source <adapter> [options]
   --source <adapter>      Required. "openclaw" (more later)
   --path <path>           Override default data source root directory
   --file <path>           Analyze a single session file (skips discovery)
+  --warp-plan <plan>      Warp-only: build | business | add-on-low | add-on-high | byok
   --since <duration|date> Default: 30d. Accepts: 7d, 30d, 90d, 2026-01-01, all
   --force                 Re-ingest and re-analyze everything
   --db <path>             Override database path
@@ -31,6 +32,7 @@ langcost status [options]
   --db <path>             Override database path`;
 
 const BOOLEAN_FLAGS = new Set(["force", "help", "no-open"]);
+const WARP_PLAN_OPTIONS = new Set(["build", "business", "add-on-low", "add-on-high", "byok"]);
 const WASTE_CATEGORIES = new Set([
   "low_cache_utilization",
   "model_overuse",
@@ -146,16 +148,23 @@ function parseScan(flags: Map<string, string | boolean>, now: Date): ScanCommand
 
   const sourcePath = getStringFlag(flags, "path");
   const file = getStringFlag(flags, "file");
+  const warpPlan = getStringFlag(flags, "warp-plan");
   const since = parseSinceArgument(getStringFlag(flags, "since"), now);
   const dbPath = getStringFlag(flags, "db");
   const apiKey = getStringFlag(flags, "api-key");
   const apiUrl = getStringFlag(flags, "api-url");
+
+  if (warpPlan && !WARP_PLAN_OPTIONS.has(warpPlan)) {
+    invalid(`Invalid --warp-plan value: ${warpPlan}`);
+  }
+  const selectedWarpPlan = warpPlan as ScanCommandOptions["warpPlan"] | undefined;
 
   return {
     command: "scan",
     source,
     ...(sourcePath ? { sourcePath } : {}),
     ...(file ? { file } : {}),
+    ...(selectedWarpPlan ? { warpPlan: selectedWarpPlan } : {}),
     ...(since ? { since } : {}),
     force: flags.get("force") === true,
     ...(dbPath ? { dbPath } : {}),
