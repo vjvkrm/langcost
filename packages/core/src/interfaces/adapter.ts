@@ -10,6 +10,7 @@ export interface IngestOptions {
   file?: string | undefined;
   apiKey?: string | undefined;
   apiUrl?: string | undefined;
+  adapterOptions?: Record<string, unknown> | undefined;
   since?: Date | undefined;
   force?: boolean | undefined;
   onProgress?: ((event: IngestProgressEvent) => void) | undefined;

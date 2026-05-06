@@ -40,7 +40,7 @@
     },
     "packages/adapter-claude-code": {
       "name": "@langcost/adapter-claude-code",
-      "version": "0.1.0",
+      "version": "0.1.4",
       "dependencies": {
         "@langcost/core": "workspace:*",
         "@langcost/db": "workspace:*",
@@ -49,6 +49,14 @@
     "packages/adapter-openclaw": {
       "name": "@langcost/adapter-openclaw",
       "version": "0.1.4",
+      "dependencies": {
+        "@langcost/core": "workspace:*",
+        "@langcost/db": "workspace:*",
+      },
+    },
+    "packages/adapter-warp": {
+      "name": "@langcost/adapter-warp",
+      "version": "0.1.0",
       "dependencies": {
         "@langcost/core": "workspace:*",
         "@langcost/db": "workspace:*",
@@ -186,6 +194,8 @@
     "@langcost/adapter-claude-code": ["@langcost/adapter-claude-code@workspace:packages/adapter-claude-code"],
 
     "@langcost/adapter-openclaw": ["@langcost/adapter-openclaw@workspace:packages/adapter-openclaw"],
+
+    "@langcost/adapter-warp": ["@langcost/adapter-warp@workspace:packages/adapter-warp"],
 
     "@langcost/analyzers": ["@langcost/analyzers@workspace:packages/analyzers"],
 

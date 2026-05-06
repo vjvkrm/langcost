@@ -1,9 +1,16 @@
+import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { createDb, createSettingsRepository, getSqliteClient, migrate } from "@langcost/db";
+import {
+  createDb,
+  createSettingsRepository,
+  createTraceRepository,
+  getSqliteClient,
+  migrate,
+} from "@langcost/db";
 import { loadAdapter } from "../src/adapter-loader";
 import { runDashboardCommand } from "../src/commands/dashboard";
 import { parseArgv, parseSinceArgument } from "../src/config";
@@ -48,6 +55,100 @@ function createTempDbPath(): string {
   return join(directory, "langcost.db");
 }
 
+function createWarpFixturePath(): string {
+  const directory = mkdtempSync(join(tmpdir(), "langcost-cli-warp-fixture-"));
+  cleanupPaths.push(directory);
+  const dbPath = join(directory, "warp.sqlite");
+  const db = new Database(dbPath);
+
+  db.exec(`
+    CREATE TABLE agent_conversations (
+      id INTEGER PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      conversation_data TEXT NOT NULL,
+      last_modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE ai_queries (
+      id INTEGER PRIMARY KEY,
+      exchange_id TEXT NOT NULL,
+      conversation_id TEXT NOT NULL,
+      start_ts DATETIME NOT NULL,
+      input TEXT NOT NULL DEFAULT '[]',
+      working_directory TEXT,
+      output_status TEXT NOT NULL DEFAULT '',
+      model_id TEXT NOT NULL DEFAULT '',
+      planning_model_id TEXT NOT NULL DEFAULT '',
+      coding_model_id TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE blocks (
+      id INTEGER PRIMARY KEY,
+      block_id TEXT NOT NULL DEFAULT '',
+      pane_leaf_uuid BLOB NOT NULL DEFAULT x'',
+      stylized_command BLOB NOT NULL DEFAULT x'',
+      stylized_output BLOB NOT NULL DEFAULT x'',
+      exit_code INTEGER NOT NULL DEFAULT 0,
+      did_execute BOOLEAN NOT NULL DEFAULT 1,
+      completed_ts DATETIME,
+      start_ts DATETIME,
+      ai_metadata TEXT
+    );
+  `);
+
+  db.prepare(
+    "INSERT INTO agent_conversations (conversation_id, conversation_data, last_modified_at) VALUES (?, ?, ?)",
+  ).run(
+    "warp-conv-1",
+    JSON.stringify({
+      run_id: "run-test",
+      conversation_usage_metadata: {
+        credits_spent: 1,
+        context_window_usage: 0.05,
+        was_summarized: false,
+        token_usage: [
+          {
+            model_id: "Claude Sonnet 4.6",
+            warp_tokens: 1000,
+            byok_tokens: 2000,
+            warp_token_usage_by_category: { primary_agent: 1000 },
+            byok_token_usage_by_category: { primary_agent: 2000 },
+          },
+        ],
+      },
+    }),
+    "2026-03-20 10:00:10",
+  );
+
+  db.prepare(
+    "INSERT INTO ai_queries (exchange_id, conversation_id, start_ts, input, output_status, model_id) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(
+    "warp-ex-1",
+    "warp-conv-1",
+    "2026-03-20 10:00:01",
+    JSON.stringify([{ Query: { text: "Do the thing", context: [] } }]),
+    '"Completed"',
+    "claude-4-6-sonnet-high",
+  );
+
+  db.prepare(
+    "INSERT INTO blocks (block_id, pane_leaf_uuid, stylized_command, stylized_output, exit_code, did_execute, start_ts, completed_ts, ai_metadata) VALUES (?, x'', ?, ?, ?, 1, ?, ?, ?)",
+  ).run(
+    "warp-block-1",
+    Buffer.from("git status"),
+    Buffer.from("On branch main"),
+    0,
+    "2026-03-20 10:00:03",
+    "2026-03-20 10:00:04",
+    JSON.stringify({
+      requested_command_action_id: "toolu_warp_1",
+      conversation_id: "warp-conv-1",
+      subagent_task_id: null,
+    }),
+  );
+
+  db.close();
+  return dbPath;
+}
+
 describe("langcost", () => {
   it("parses shorthand scan args", () => {
     const parsed = parseArgv(["--source", "openclaw"]);
@@ -65,6 +166,21 @@ describe("langcost", () => {
     expect(parsed?.toISOString()).toBe("2026-02-19T12:00:00.000Z");
     expect(parseSinceArgument("90d", now)?.toISOString()).toBeDefined();
     expect(parseSinceArgument("all", now)).toBeUndefined();
+  });
+
+  it("parses --warp-plan for Warp scans", () => {
+    const parsed = parseArgv(["scan", "--source", "warp", "--warp-plan", "business"]);
+
+    expect(parsed.command).toBe("scan");
+    if (parsed.command === "scan") {
+      expect(parsed.warpPlan).toBe("business");
+    }
+  });
+
+  it("rejects invalid --warp-plan values", () => {
+    expect(() =>
+      parseArgv(["scan", "--source", "warp", "--warp-plan", "not-a-plan"]),
+    ).toThrow("Invalid --warp-plan value: not-a-plan");
   });
 
   it("returns a friendly error when an adapter is missing", async () => {
@@ -137,6 +253,49 @@ describe("langcost", () => {
     expect(exitCode).toBe(0);
     expect(stderr.join("")).toBe("");
     expect(stdout.join("")).toContain("Scanned");
+  });
+
+  it("threads --warp-plan through scan ingestion and shows Warp arbitrage output", async () => {
+    const dbPath = createTempDbPath();
+    const warpFixturePath = createWarpFixturePath();
+    const scanRuntime = createBufferRuntime();
+
+    const scanExitCode = await main(
+      [
+        "scan",
+        "--source",
+        "warp",
+        "--path",
+        warpFixturePath,
+        "--warp-plan",
+        "business",
+        "--db",
+        dbPath,
+      ],
+      scanRuntime.runtime,
+    );
+
+    expect(scanExitCode).toBe(0);
+    expect(scanRuntime.stderr.join("")).toBe("");
+    expect(scanRuntime.stdout.join("")).toContain("Warp arbitrage:");
+
+    const db = createDb(dbPath);
+    const trace = createTraceRepository(db).listForAnalysis()[0];
+    getSqliteClient(db).close(false);
+
+    expect(trace?.source).toBe("warp");
+    expect(trace?.metadata?.effectiveCreditRateUsd).toBe(50 / 1500);
+    expect(trace?.metadata?.creditCostUsd).toBeCloseTo(50 / 1500, 8);
+    expect(trace?.metadata?.apiCostUsd).toBeCloseTo(0.009, 8);
+
+    const reportRuntime = createBufferRuntime();
+    const reportExitCode = await main(
+      ["report", "--trace", trace?.id ?? "", "--db", dbPath],
+      reportRuntime.runtime,
+    );
+
+    expect(reportExitCode).toBe(0);
+    expect(reportRuntime.stdout.join("")).toContain("Warp arbitrage:");
   });
 
   it("excludes model_overuse from scan waste totals", async () => {

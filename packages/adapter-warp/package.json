@@ -1,0 +1,28 @@
+{
+  "name": "@langcost/adapter-warp",
+  "version": "0.1.0",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "Warp adapter for langcost — reads AI session data from warp.sqlite",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vjvkrm/langcost",
+    "directory": "packages/adapter-warp"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@langcost/core": "workspace:*",
+    "@langcost/db": "workspace:*"
+  }
+}

@@ -35,11 +35,14 @@ export interface CliRuntime {
   dashboard?: DashboardRuntimeHooks;
 }
 
+export type WarpPlanOption = "build" | "business" | "add-on-low" | "add-on-high" | "byok";
+
 export interface ScanCommandOptions {
   command: "scan";
   source: string;
   sourcePath?: string;
   file?: string;
+  warpPlan?: WarpPlanOption;
   since?: Date;
   force: boolean;
   dbPath?: string;

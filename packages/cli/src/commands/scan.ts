@@ -7,6 +7,7 @@ import {
   createWasteReportRepository,
   getSqliteClient,
   migrate,
+  type TraceRecord,
   type WasteReportRecord,
 } from "@langcost/db";
 
@@ -24,6 +25,7 @@ function toValidateOptions(options: ScanCommandOptions) {
   return {
     ...(options.sourcePath ? { sourcePath: options.sourcePath } : {}),
     ...(options.file ? { file: options.file } : {}),
+    ...(options.warpPlan ? { adapterOptions: { warpPlan: options.warpPlan } } : {}),
     ...(options.since ? { since: options.since } : {}),
     ...(options.apiKey ? { apiKey: options.apiKey } : {}),
     ...(options.apiUrl ? { apiUrl: options.apiUrl } : {}),
@@ -59,6 +61,51 @@ function summarizeTopWaste(reports: WasteReportRecord[], totalWasteUsd: number):
       return `${category} (${formatPercent(percent)})`;
     })
     .join(", ");
+}
+
+function getNumberMetadataField(
+  metadata: Record<string, unknown> | undefined,
+  fieldName: string,
+): number | null {
+  const value = metadata?.[fieldName];
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+  return value;
+}
+
+function summarizeWarpArbitrage(traces: TraceRecord[]): string | null {
+  const warpTraces = traces.filter((trace) => trace.source === "warp");
+  if (warpTraces.length === 0) {
+    return null;
+  }
+
+  let paidCostUsd = 0;
+  let equivalentApiCostUsd = 0;
+  let comparedTraces = 0;
+
+  for (const trace of warpTraces) {
+    const metadata = trace.metadata as Record<string, unknown> | undefined;
+    const apiCostUsd = getNumberMetadataField(metadata, "apiCostUsd");
+    if (apiCostUsd === null || apiCostUsd <= 0) {
+      continue;
+    }
+
+    paidCostUsd += trace.totalCostUsd;
+    equivalentApiCostUsd += apiCostUsd;
+    comparedTraces += 1;
+  }
+
+  if (comparedTraces === 0 || equivalentApiCostUsd <= 0) {
+    return null;
+  }
+
+  const markupPct = ((paidCostUsd - equivalentApiCostUsd) / equivalentApiCostUsd) * 100;
+  const direction = markupPct >= 0 ? "higher" : "lower";
+
+  return `Warp arbitrage: paid ${formatCurrency(paidCostUsd)} vs API-equivalent ${formatCurrency(
+    equivalentApiCostUsd,
+  )} (${formatPercent(Math.abs(markupPct))} ${direction})`;
 }
 
 export async function runScanCommand(
@@ -131,6 +178,12 @@ export async function runScanCommand(
     const lines = [
       `${pluralize(scannedTraces.length, "trace")}, ${pluralize(spansCount, "span")}, ${pluralize(messagesCount, "message")}`,
       `Total cost: ${formatCurrency(totalCostUsd)}`,
+      ...(options.source === "warp"
+        ? (() => {
+            const warpArbitrage = summarizeWarpArbitrage(scannedTraces);
+            return warpArbitrage ? [warpArbitrage] : [];
+          })()
+        : []),
       wasteLine,
       `Top waste: ${summarizeTopWaste(actionableReports, cappedWasteUsd)}`,
     ];

@@ -69,10 +69,12 @@ Scanned 12 sessions
 # Install the CLI + the adapter for your agent framework
 npm install -g langcost @langcost/adapter-claude-code
 # or: npm install -g langcost @langcost/adapter-openclaw
+# or: npm install -g langcost @langcost/adapter-warp
 
 # Scan your sessions
 langcost scan --source claude-code
 # or: langcost scan --source openclaw
+# or: langcost scan --source warp
 
 # Open the dashboard
 langcost dashboard
@@ -94,6 +96,8 @@ langcost scan --source claude-code --file /path/to/session.jsonl
 
 # Scan older sessions (default is last 30 days)
 langcost scan --source claude-code --since 90d
+# For Warp scans, choose credit-rate assumptions for arbitrage reporting
+langcost scan --source warp --warp-plan business
 
 # Force re-analysis of everything
 langcost scan --source claude-code --force
@@ -115,6 +119,7 @@ LangCost uses a plugin architecture — adapters translate agent-specific data i
 |---------|---------|--------|---------------|
 | **Claude Code** | `@langcost/adapter-claude-code` | `~/.claude/projects/` | JSONL session logs from the Claude Code CLI |
 | **OpenClaw** | `@langcost/adapter-openclaw` | `~/.openclaw/` | JSONL session logs from OpenClaw agents |
+| **Warp** | `@langcost/adapter-warp` | `~/Library/Group Containers/.../warp.sqlite` | Oz agent sessions from Warp's local SQLite database |
 
 ```bash
 # Use multiple adapters — scan from different sources into the same DB
@@ -285,6 +290,7 @@ langcost scan --source <adapter> [options]
   --source <adapter>      Required. e.g. "claude-code", "openclaw"
   --path <path>           Override data source path
   --file <path>           Analyze a single session file
+  --warp-plan <plan>      Warp-only: build | business | add-on-low | add-on-high | byok
   --since <duration>      Default: 30d. Accepts: 7d, 30d, 90d, all
   --force                 Re-ingest and re-analyze everything
   --db <path>             Override database path
