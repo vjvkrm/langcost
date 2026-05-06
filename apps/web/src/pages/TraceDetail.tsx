@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { getTraceDetail, type TraceDetailResponse } from "../api/client";
+import {
+  getTraceDetail,
+  readWarpArbitrage,
+  type TraceDetailResponse,
+  type TraceSummary,
+} from "../api/client";
 import {
   formatCategoryLabel,
   formatDateTime,
@@ -138,6 +143,8 @@ export function TraceDetail({ traceId, refreshToken, onBack }: TraceDetailProps)
           </div>
         </div>
       </div>
+
+      <WarpArbitrageSection trace={detail.trace} />
 
       <section className="grid gap-4 lg:grid-cols-3">
         {detail.costBreakdown.segments.map((segment) => (
@@ -280,5 +287,93 @@ export function TraceDetail({ traceId, refreshToken, onBack }: TraceDetailProps)
         </div>
       </section>
     </div>
+  );
+}
+
+function WarpArbitrageSection({ trace }: { trace: TraceSummary }) {
+  const arbitrage = readWarpArbitrage(trace);
+  if (!arbitrage) return null;
+
+  const { creditCostUsd, apiCostUsd, costMarkupPct, warpPlan, billingMode } = arbitrage;
+  const delta = creditCostUsd - apiCostUsd;
+  const comparable = apiCostUsd > 0;
+  const cheaper = comparable && delta < 0;
+  const deltaTone = !comparable
+    ? "text-slate-400"
+    : cheaper
+      ? "text-emerald-300"
+      : "text-amber-300";
+  const headline = !comparable
+    ? "Warp arbitrage (partial data)"
+    : cheaper
+      ? "Warp cheaper than API"
+      : "Warp markup vs API";
+
+  const isByok = billingMode === "byok";
+  const isMixed = billingMode === "mixed";
+
+  return (
+    <section className="panel p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="section-kicker">Warp arbitrage</div>
+          <h2 className="mt-2 text-lg font-semibold text-slate-100">{headline}</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            What you paid Warp in credits vs. the same tokens at direct API rates.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-300">
+            plan: {warpPlan}
+          </span>
+          {isByok ? (
+            <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2.5 py-1 text-emerald-200">
+              BYOK
+            </span>
+          ) : null}
+          {isMixed ? (
+            <span className="rounded-full border border-blue-300/30 bg-blue-300/10 px-2.5 py-1 text-blue-200">
+              partial BYOK
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="soft-card">
+          <div className="text-xs text-slate-500">Paid (Warp credits)</div>
+          <div className="mt-1 text-xl font-semibold text-slate-50">
+            {formatUsd(creditCostUsd)}
+          </div>
+        </div>
+        <div className="soft-card">
+          <div className="text-xs text-slate-500">API-equivalent</div>
+          <div className="mt-1 text-xl font-semibold text-slate-50">
+            {comparable ? formatUsd(apiCostUsd) : "—"}
+          </div>
+          {!comparable ? (
+            <div className="mt-1 text-xs text-slate-500">model not yet priced</div>
+          ) : null}
+        </div>
+        <div className="soft-card">
+          <div className="text-xs text-slate-500">Δ</div>
+          <div className={`mt-1 text-xl font-semibold ${deltaTone}`}>
+            {comparable ? (
+              <>
+                {cheaper ? "−" : "+"}
+                {formatUsd(Math.abs(delta))}
+                {costMarkupPct !== null ? (
+                  <span className="ml-2 text-sm font-normal text-slate-400">
+                    ({formatPercent(Math.abs(costMarkupPct))} {cheaper ? "lower" : "higher"})
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              "—"
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

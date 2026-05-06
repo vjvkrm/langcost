@@ -75,6 +75,44 @@ export function getTopSpans(spans: SpanRecord[], limit: number): SpanRecord[] {
     .slice(0, limit);
 }
 
+function readWarpArbitrageMetadata(trace: TraceRecord): {
+  creditCostUsd: number;
+  apiCostUsd: number;
+  billingMode: string;
+} | null {
+  if (trace.source !== "warp") return null;
+  const meta = trace.metadata as Record<string, unknown> | null;
+  if (!meta) return null;
+  const apiCostUsd = typeof meta.apiCostUsd === "number" ? meta.apiCostUsd : null;
+  const creditCostUsd = typeof meta.creditCostUsd === "number" ? meta.creditCostUsd : null;
+  const billingMode = typeof meta.billingMode === "string" ? meta.billingMode : "unknown";
+  if (apiCostUsd === null || creditCostUsd === null) return null;
+  return { creditCostUsd, apiCostUsd, billingMode };
+}
+
+function buildWarpArbitrageAggregate(traces: TraceRecord[]) {
+  const eligible = traces
+    .map((trace) => readWarpArbitrageMetadata(trace))
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null && entry.apiCostUsd > 0);
+
+  if (eligible.length === 0) return null;
+
+  const totalPaidUsd = sumBy(eligible, (entry) => entry.creditCostUsd);
+  const totalApiEquivalentUsd = sumBy(eligible, (entry) => entry.apiCostUsd);
+  const markupPct =
+    totalApiEquivalentUsd > 0
+      ? ((totalPaidUsd - totalApiEquivalentUsd) / totalApiEquivalentUsd) * 100
+      : 0;
+
+  return {
+    totalPaidUsd,
+    totalApiEquivalentUsd,
+    markupPct,
+    comparedTraces: eligible.length,
+    totalWarpTraces: traces.filter((trace) => trace.source === "warp").length,
+  };
+}
+
 export function buildOverviewPayload(
   traces: TraceRecord[],
   wasteReports: WasteReportRecord[],
@@ -211,6 +249,7 @@ export function buildOverviewPayload(
       traces.length > 0
         ? new Date(Math.max(...traces.map((trace) => trace.ingestedAt.getTime()))).toISOString()
         : null,
+    warpArbitrage: buildWarpArbitrageAggregate(traces),
   };
 }
 

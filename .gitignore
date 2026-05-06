@@ -4,7 +4,8 @@ coverage
 *.db
 *.db-shm
 *.db-wal
-.kodeklarity/
+**/.kodeklarity/*
+!/.kodeklarity/config.json
 .DS_Store
 .env
 .env.*
