@@ -25,7 +25,7 @@ function toValidateOptions(options: ScanCommandOptions) {
   return {
     ...(options.sourcePath ? { sourcePath: options.sourcePath } : {}),
     ...(options.file ? { file: options.file } : {}),
-    ...(options.warpPlan ? { warpPlan: options.warpPlan } : {}),
+    ...(options.warpPlan ? { adapterOptions: { warpPlan: options.warpPlan } } : {}),
     ...(options.since ? { since: options.since } : {}),
     ...(options.apiKey ? { apiKey: options.apiKey } : {}),
     ...(options.apiUrl ? { apiUrl: options.apiUrl } : {}),
