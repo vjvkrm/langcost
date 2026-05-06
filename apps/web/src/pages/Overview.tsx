@@ -34,7 +34,7 @@ export function Overview({ refreshToken, onNavigate, source, billingMode }: Over
       try {
         const [overviewResponse, recommendationResponse] = await Promise.all([
           getOverview(source),
-          getRecommendations(),
+          getRecommendations(source),
         ]);
 
         if (!active) {

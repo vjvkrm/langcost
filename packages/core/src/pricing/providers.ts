@@ -12,6 +12,22 @@ export interface ModelPricing {
 
 export const MODEL_PRICING: ModelPricing[] = [
   // ──────────────────────────────────────────
+  // Anthropic — Opus 4.7 ($5 input)
+  // Same per-token rates as 4.6, but a new tokenizer that may use
+  // up to 35% more tokens for the same text. Source: docs.claude.com/pricing.
+  // ──────────────────────────────────────────
+  {
+    provider: "anthropic",
+    model: "claude-opus-4-7",
+    aliases: ["opus-4-7", "claude-opus-4.7", "opus-4.7"],
+    inputPricePerMToken: 5,
+    outputPricePerMToken: 25,
+    cachedInputPricePerMToken: 0.5,
+    cacheWrite5mInputPricePerMToken: 6.25,
+    cacheWrite1hInputPricePerMToken: 10,
+    updatedAt: "2026-05-06",
+  },
+  // ──────────────────────────────────────────
   // Anthropic — Opus 4.5 / 4.6 ($5 input)
   // ──────────────────────────────────────────
   {
@@ -23,7 +39,7 @@ export const MODEL_PRICING: ModelPricing[] = [
     cachedInputPricePerMToken: 0.5,
     cacheWrite5mInputPricePerMToken: 6.25,
     cacheWrite1hInputPricePerMToken: 10,
-    updatedAt: "2026-04-03",
+    updatedAt: "2026-05-06",
   },
   // ──────────────────────────────────────────
   // Anthropic — Opus 4.0 / 4.1 ($15 input)

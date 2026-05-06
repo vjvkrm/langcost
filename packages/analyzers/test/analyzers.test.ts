@@ -134,14 +134,14 @@ describe("@langcost/analyzers", () => {
     expect(reports.some((report) => report.category === "retry_waste")).toBe(true);
   });
 
-  it("detects tool failure waste", async () => {
+  it("does not flag tool failures the agent treated as a signal (no retry)", async () => {
     const db = createTempDb();
     const trace = await ingestFixture(db, "tool-heavy.jsonl");
 
     await wasteDetector.analyze(db, { traceIds: [trace.id] });
 
     const reports = createWasteReportRepository(db).listByTraceId(trace.id);
-    expect(reports.some((report) => report.category === "tool_failure_waste")).toBe(true);
+    expect(reports.some((report) => report.category === "tool_failure_waste")).toBe(false);
   });
 
   it("detects unusually high output spans", async () => {

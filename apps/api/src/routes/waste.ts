@@ -58,9 +58,23 @@ export function createWasteRoute(options: { dbPath?: string } = {}) {
   });
 
   route.get("/recommendations", async (c) => {
-    const payload = await withDb(options.dbPath, (db) => ({
-      recommendations: buildRecommendations(createWasteReportRepository(db).list()),
-    }));
+    const source = c.req.query("source");
+
+    const payload = await withDb(options.dbPath, (db) => {
+      let reports = createWasteReportRepository(db).list();
+
+      if (source) {
+        const traceIds = new Set(
+          createTraceRepository(db)
+            .listForAnalysis()
+            .filter((t) => t.source === source)
+            .map((t) => t.id),
+        );
+        reports = reports.filter((r) => traceIds.has(r.traceId));
+      }
+
+      return { recommendations: buildRecommendations(reports) };
+    });
 
     return c.json(payload);
   });

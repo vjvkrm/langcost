@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   getTraceDetail,
+  readClaudeCodeTokens,
   readWarpArbitrage,
   type TraceDetailResponse,
   type TraceSummary,
@@ -145,6 +146,7 @@ export function TraceDetail({ traceId, refreshToken, onBack }: TraceDetailProps)
       </div>
 
       <WarpArbitrageSection trace={detail.trace} />
+      <ClaudeCodeTokensSection trace={detail.trace} />
 
       <section className="grid gap-4 lg:grid-cols-3">
         {detail.costBreakdown.segments.map((segment) => (
@@ -372,6 +374,133 @@ function WarpArbitrageSection({ trace }: { trace: TraceSummary }) {
               "—"
             )}
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ClaudeCodeTokensSection({ trace }: { trace: TraceSummary }) {
+  const breakdown = readClaudeCodeTokens(trace);
+  if (!breakdown) return null;
+
+  const {
+    freshInputTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
+    outputTokens,
+    inputCostUsd,
+    cacheWriteCostUsd,
+    cacheReadCostUsd,
+    outputCostUsd,
+    totalCostUsd,
+    cacheHitRate,
+    cacheRoi,
+  } = breakdown;
+
+  const totalContextTokens = freshInputTokens + cacheWriteTokens + cacheReadTokens;
+
+  // Cache ROI = cache_read_savings / cache_write_premium.
+  // Read at 0.1× input vs full input = 0.9× saved per read token.
+  // Write at 2× input vs full input = 1× extra per write token (1h cache).
+  // ROI > 1 means cache investment paid back; < 1 means writes weren't amortized.
+  const roiTone =
+    cacheRoi === null
+      ? "text-slate-400"
+      : cacheRoi >= 1
+        ? "text-emerald-300"
+        : cacheRoi >= 0.5
+          ? "text-amber-300"
+          : "text-red-300";
+  const roiLabel =
+    cacheRoi === null
+      ? "—"
+      : cacheRoi >= 1
+        ? `${cacheRoi.toFixed(1)}× (paid back)`
+        : `${cacheRoi.toFixed(2)}× (under-amortized)`;
+
+  const rows: Array<{ label: string; tokens: number; costUsd: number; rateNote: string }> = [
+    { label: "Fresh input", tokens: freshInputTokens, costUsd: inputCostUsd, rateNote: "1× rate" },
+    {
+      label: "Cache writes",
+      tokens: cacheWriteTokens,
+      costUsd: cacheWriteCostUsd,
+      rateNote: "2× rate (1h)",
+    },
+    {
+      label: "Cache reads",
+      tokens: cacheReadTokens,
+      costUsd: cacheReadCostUsd,
+      rateNote: "0.1× rate",
+    },
+    { label: "Output", tokens: outputTokens, costUsd: outputCostUsd, rateNote: "" },
+  ];
+
+  return (
+    <section className="panel p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="section-kicker">Tokens</div>
+          <h2 className="mt-2 text-lg font-semibold text-slate-100">
+            API-equivalent breakdown
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Where this session's tokens went, priced at Anthropic API rates.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3 text-right">
+          <div className="pill-card">
+            <div className="text-xs text-slate-500">Total context</div>
+            <div className="mt-1 text-lg font-semibold text-slate-50">
+              {formatInt(totalContextTokens)}
+            </div>
+          </div>
+          <div className="pill-card">
+            <div className="text-xs text-slate-500">API-equivalent cost</div>
+            <div className="mt-1 text-lg font-semibold text-slate-50">
+              {formatUsd(totalCostUsd)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 overflow-hidden rounded-2xl border border-[color:var(--border)]">
+        <table className="w-full text-sm">
+          <thead className="bg-white/[0.02] text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-4 py-2 text-left font-medium">Bucket</th>
+              <th className="px-4 py-2 text-right font-medium">Tokens</th>
+              <th className="px-4 py-2 text-right font-medium">Cost</th>
+              <th className="px-4 py-2 text-right font-medium">Rate</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[color:var(--border)]">
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <td className="px-4 py-2.5 text-slate-200">{row.label}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-slate-300">
+                  {formatInt(row.tokens)}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-slate-100">
+                  {formatUsd(row.costUsd)}
+                </td>
+                <td className="px-4 py-2.5 text-right text-xs text-slate-500">{row.rateNote}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-6 text-sm">
+        <div>
+          <div className="text-xs text-slate-500">Cache hit rate</div>
+          <div className="mt-1 font-semibold text-slate-100">
+            {formatPercent(cacheHitRate * 100)}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-500">Cache ROI</div>
+          <div className={`mt-1 font-semibold ${roiTone}`}>{roiLabel}</div>
         </div>
       </div>
     </section>

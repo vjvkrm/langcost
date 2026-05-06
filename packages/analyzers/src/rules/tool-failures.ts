@@ -1,16 +1,68 @@
-import type { WasteReportRecord } from "@langcost/db";
+import type { SpanRecord, WasteReportRecord } from "@langcost/db";
 
 import { getSpanCost, getSpanTotalTokens } from "../context";
 import { createWasteReport, severityFromCost } from "./shared";
 import type { WasteRule } from "./types";
+
+const RETRY_WINDOW_MS = 5 * 60 * 1000;
+
+// For shell tool calls (Bash, run_command, etc.) the toolInput holds a command — either
+// raw or as JSON ({command:"..."}). Extract the leading executable token so we can compare
+// "npm test" to "npm test 2>&1" without false-matching unrelated Bash calls.
+function getCommandFirstToken(toolInput: string | null | undefined): string | null {
+  if (!toolInput) return null;
+  let command = toolInput;
+  try {
+    const parsed = JSON.parse(toolInput);
+    if (parsed && typeof parsed === "object" && typeof (parsed as { command?: unknown }).command === "string") {
+      command = (parsed as { command: string }).command;
+    }
+  } catch {}
+  const trimmed = command.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.split(/\s+/)[0] ?? null;
+}
+
+// A tool failure is only "waste" if the agent had to spend additional model work recovering.
+// Recovery looks like: a later tool span of the same tool name within RETRY_WINDOW_MS, and —
+// for shell tools — sharing the same command first token. Without this, the failure was
+// almost certainly an intentional signal (e.g., `grep -c` exit 1 = "no matches found").
+function hasRetryEvidence(failedSpan: SpanRecord, toolSpans: SpanRecord[]): boolean {
+  const failedAt = failedSpan.startedAt.getTime();
+  const failedToken = getCommandFirstToken(failedSpan.toolInput);
+
+  return toolSpans.some((candidate) => {
+    if (candidate.id === failedSpan.id) return false;
+    if (candidate.toolName !== failedSpan.toolName) return false;
+
+    const startedAt = candidate.startedAt.getTime();
+    if (startedAt <= failedAt) return false;
+    if (startedAt - failedAt > RETRY_WINDOW_MS) return false;
+
+    if (failedToken !== null) {
+      const candidateToken = getCommandFirstToken(candidate.toolInput);
+      return candidateToken === failedToken;
+    }
+
+    return true;
+  });
+}
 
 export const toolFailuresRule: WasteRule = {
   name: "tool-failures",
   tier: 1,
   detect(contexts): WasteReportRecord[] {
     return contexts.flatMap((context) => {
-      const failedToolSpans = context.toolSpans.filter(
+      const candidateFailures = context.toolSpans.filter(
         (span) => span.status === "error" || span.toolSuccess === false,
+      );
+
+      if (candidateFailures.length === 0) {
+        return [];
+      }
+
+      const failedToolSpans = candidateFailures.filter((span) =>
+        hasRetryEvidence(span, context.toolSpans),
       );
 
       if (failedToolSpans.length === 0) {
@@ -57,6 +109,7 @@ export const toolFailuresRule: WasteRule = {
           evidence: {
             failedToolSpanIds: failedToolSpans.map((span) => span.id),
             retryLlmSpanIds: retryLlmSpans.map((span) => span.id),
+            ignoredFailureCount: candidateFailures.length - failedToolSpans.length,
           },
         }),
       ];

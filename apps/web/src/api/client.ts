@@ -116,6 +116,60 @@ export interface WarpArbitrageMetadata {
   billingMode: "credit" | "byok" | "mixed" | "unknown";
 }
 
+export interface ClaudeCodeTokenBreakdown {
+  freshInputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+  outputTokens: number;
+  inputCostUsd: number;
+  cacheWriteCostUsd: number;
+  cacheReadCostUsd: number;
+  outputCostUsd: number;
+  totalCostUsd: number;
+  cacheHitRate: number;
+  cacheRoi: number | null;
+}
+
+export function readClaudeCodeTokens(trace: TraceSummary): ClaudeCodeTokenBreakdown | null {
+  if (trace.source !== "claude-code" || !trace.metadata) return null;
+  const meta = trace.metadata;
+  const num = (key: string): number => {
+    const v = meta[key];
+    return typeof v === "number" && Number.isFinite(v) ? v : 0;
+  };
+
+  const cacheWriteTokens = num("totalCacheCreationTokens");
+  const cacheReadTokens = num("totalCacheReadTokens");
+  const freshInputTokens = trace.totalInputTokens;
+  const outputTokens = trace.totalOutputTokens;
+
+  const inputCostUsd = num("totalInputCostUsd");
+  const cacheWriteCostUsd = num("totalCacheWriteCostUsd");
+  const cacheReadCostUsd = num("totalCacheReadCostUsd");
+  const outputCostUsd = num("totalOutputCostUsd");
+  const totalCostUsd = inputCostUsd + cacheWriteCostUsd + cacheReadCostUsd + outputCostUsd;
+
+  const totalContextTokens = freshInputTokens + cacheWriteTokens + cacheReadTokens;
+  const cacheHitRate = totalContextTokens > 0 ? cacheReadTokens / totalContextTokens : 0;
+  const cacheRoi = cacheWriteCostUsd > 0 ? cacheReadCostUsd / cacheWriteCostUsd : null;
+
+  if (totalContextTokens === 0 && outputTokens === 0) return null;
+
+  return {
+    freshInputTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
+    outputTokens,
+    inputCostUsd,
+    cacheWriteCostUsd,
+    cacheReadCostUsd,
+    outputCostUsd,
+    totalCostUsd,
+    cacheHitRate,
+    cacheRoi,
+  };
+}
+
 export function readWarpArbitrage(trace: TraceSummary): WarpArbitrageMetadata | null {
   if (trace.source !== "warp" || !trace.metadata) return null;
   const meta = trace.metadata;
@@ -358,8 +412,12 @@ export async function getOverview(source?: string): Promise<OverviewResponse> {
   return request<OverviewResponse>(`/overview${buildQuery({ source })}`);
 }
 
-export async function getRecommendations(): Promise<{ recommendations: Recommendation[] }> {
-  return request<{ recommendations: Recommendation[] }>("/waste/recommendations");
+export async function getRecommendations(
+  source?: string,
+): Promise<{ recommendations: Recommendation[] }> {
+  return request<{ recommendations: Recommendation[] }>(
+    `/waste/recommendations${buildQuery({ source })}`,
+  );
 }
 
 export async function getTraces(

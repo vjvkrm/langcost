@@ -1,5 +1,5 @@
 import type { IngestError, Message } from "@langcost/core";
-import { calculateCost, estimateTokenCount } from "@langcost/core";
+import { calculateCostWithCache, estimateTokenCount } from "@langcost/core";
 import type { MessageRecord, SpanRecord, TraceRecord } from "@langcost/db";
 
 import type {
@@ -164,22 +164,23 @@ function toolResultContent(block: ClaudeCodeToolResultBlock): string {
  * - cache_read_input_tokens: tokens read from cache (charged at 0.1x input)
  * - output_tokens: output tokens
  */
-/**
- * Calculate cost from Claude Code usage data.
- *
- * Headline cost = input + output tokens only (no cache).
- * Cache tokens are tracked separately in metadata for optional display.
- * Rationale: most Claude Code users are on subscription plans where
- * cache pricing doesn't apply, and cache validity windows make the
- * cost unreliable.
- */
+// API-equivalent cost using full cache pricing. Claude Code uses 1h cache TTL
+// (write at 2× input rate). This is the rate users would pay if they ran the
+// same workload through the Claude API directly.
 function calculateCostFromUsage(usage: ClaudeCodeUsage, model: string) {
   const inputTokens = usage.input_tokens ?? 0;
   const outputTokens = usage.output_tokens ?? 0;
   const cacheCreationTokens = usage.cache_creation_input_tokens ?? 0;
   const cacheReadTokens = usage.cache_read_input_tokens ?? 0;
 
-  const cost = calculateCost(model, inputTokens, outputTokens);
+  const cost = calculateCostWithCache(
+    model,
+    inputTokens,
+    outputTokens,
+    cacheCreationTokens,
+    cacheReadTokens,
+    "1h",
+  );
 
   return {
     inputTokens,
@@ -187,6 +188,10 @@ function calculateCostFromUsage(usage: ClaudeCodeUsage, model: string) {
     cacheCreationTokens,
     cacheReadTokens,
     costUsd: cost.totalCost,
+    inputCostUsd: cost.inputCost,
+    outputCostUsd: cost.outputCost,
+    cacheWriteCostUsd: cost.cacheWriteCost,
+    cacheReadCostUsd: cost.cacheReadCost,
   };
 }
 
@@ -279,6 +284,10 @@ export function normalizeConversation(
   let totalCostUsd = 0;
   let totalCacheCreationTokens = 0;
   let totalCacheReadTokens = 0;
+  let totalInputCostUsd = 0;
+  let totalOutputCostUsd = 0;
+  let totalCacheWriteCostUsd = 0;
+  let totalCacheReadCostUsd = 0;
   let totalDurationMs = 0;
 
   let lastLlmSpanId: string | undefined;
@@ -463,6 +472,10 @@ export function normalizeConversation(
             cacheCreationTokens: usage.cache_creation_input_tokens ?? 0,
             cacheReadTokens: usage.cache_read_input_tokens ?? 0,
             costUsd: 0,
+            inputCostUsd: 0,
+            outputCostUsd: 0,
+            cacheWriteCostUsd: 0,
+            cacheReadCostUsd: 0,
           };
 
       const spanStatus = assistantMessage.stop_reason === "error" ? "error" : "ok";
@@ -472,6 +485,10 @@ export function normalizeConversation(
       totalCostUsd += costData.costUsd;
       totalCacheCreationTokens += costData.cacheCreationTokens;
       totalCacheReadTokens += costData.cacheReadTokens;
+      totalInputCostUsd += costData.inputCostUsd;
+      totalOutputCostUsd += costData.outputCostUsd;
+      totalCacheWriteCostUsd += costData.cacheWriteCostUsd;
+      totalCacheReadCostUsd += costData.cacheReadCostUsd;
 
       if (spanStatus === "error") {
         hasError = true;
@@ -589,6 +606,10 @@ export function normalizeConversation(
       totalDurationMs,
       totalCacheCreationTokens,
       totalCacheReadTokens,
+      totalInputCostUsd,
+      totalOutputCostUsd,
+      totalCacheWriteCostUsd,
+      totalCacheReadCostUsd,
       interactive: true,
       sourceFile: conversationFile.filePath,
       parentConversationId: conversationFile.parentConversationId ?? null,
