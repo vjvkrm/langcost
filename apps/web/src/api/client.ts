@@ -95,6 +95,49 @@ export interface OverviewResponse {
   totalCacheReadTokens: number;
   totalCacheWriteTokens: number;
   lastScanAt: string | null;
+  warpArbitrage: WarpArbitrageAggregate | null;
+}
+
+export interface WarpArbitrageAggregate {
+  totalPaidUsd: number;
+  totalApiEquivalentUsd: number;
+  markupPct: number;
+  comparedTraces: number;
+  totalWarpTraces: number;
+}
+
+export interface WarpArbitrageMetadata {
+  creditCostUsd: number;
+  apiCostUsd: number;
+  costMarkupPct: number | null;
+  warpPlan: string;
+  effectiveCreditRateUsd: number;
+  creditsSpent: number;
+  billingMode: "credit" | "byok" | "mixed" | "unknown";
+}
+
+export function readWarpArbitrage(trace: TraceSummary): WarpArbitrageMetadata | null {
+  if (trace.source !== "warp" || !trace.metadata) return null;
+  const meta = trace.metadata;
+  const creditCostUsd = typeof meta.creditCostUsd === "number" ? meta.creditCostUsd : null;
+  const apiCostUsd = typeof meta.apiCostUsd === "number" ? meta.apiCostUsd : null;
+  if (creditCostUsd === null || apiCostUsd === null) return null;
+  if (creditCostUsd === 0 && apiCostUsd === 0) return null;
+  return {
+    creditCostUsd,
+    apiCostUsd,
+    costMarkupPct: typeof meta.costMarkupPct === "number" ? meta.costMarkupPct : null,
+    warpPlan: typeof meta.warpPlan === "string" ? meta.warpPlan : "unknown",
+    effectiveCreditRateUsd:
+      typeof meta.effectiveCreditRateUsd === "number" ? meta.effectiveCreditRateUsd : 0,
+    creditsSpent: typeof meta.creditsSpent === "number" ? meta.creditsSpent : 0,
+    billingMode:
+      meta.billingMode === "credit" ||
+      meta.billingMode === "byok" ||
+      meta.billingMode === "mixed"
+        ? meta.billingMode
+        : "unknown",
+  };
 }
 
 export interface Recommendation {

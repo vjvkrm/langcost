@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "stack": {
+    "detected": [
+      "generic",
+      "react",
+      "drizzle"
+    ],
+    "enabled": [
+      "generic",
+      "react",
+      "drizzle"
+    ],
+    "disabled": []
+  },
+  "workspaces": {
+    "apps/api": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "apps/web": {
+      "adapters": [
+        "react",
+        "generic"
+      ]
+    },
+    "packages/adapter-claude-code": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/adapter-openclaw": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/adapter-warp": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/analyzers": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/cli": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/core": {
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/db": {
+      "adapters": [
+        "drizzle",
+        "generic"
+      ]
+    }
+  },
+  "customBoundaries": [
+    {
+      "name": "core_contracts",
+      "kind": "interface",
+      "glob": "packages/core/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Source-agnostic contracts — types, interfaces, pricing — that every adapter and consumer depends on"
+    },
+    {
+      "name": "db_repositories",
+      "kind": "repository",
+      "glob": "packages/db/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Drizzle repositories and schema; only data access layer in the system"
+    },
+    {
+      "name": "analyzers",
+      "kind": "service",
+      "glob": "packages/analyzers/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Source-agnostic cost and waste analysis rules running over normalized data"
+    },
+    {
+      "name": "cli",
+      "kind": "service",
+      "glob": "packages/cli/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "CLI commands, argv parsing, and dynamic adapter loader"
+    },
+    {
+      "name": "adapter_warp",
+      "kind": "adapter",
+      "glob": "packages/adapter-warp/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Warp adapter — ingests warp.sqlite into normalized traces/spans/messages"
+    },
+    {
+      "name": "adapter_openclaw",
+      "kind": "adapter",
+      "glob": "packages/adapter-openclaw/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "OpenClaw adapter — ingests JSONL session logs"
+    },
+    {
+      "name": "adapter_claude_code",
+      "kind": "adapter",
+      "glob": "packages/adapter-claude-code/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Claude Code adapter — ingests ~/.claude/projects session logs"
+    },
+    {
+      "name": "api_routes",
+      "kind": "route",
+      "glob": "apps/api/src/routes/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Hono REST endpoints under /api/v1/"
+    },
+    {
+      "name": "api_lib",
+      "kind": "service",
+      "glob": "apps/api/src/lib/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Aggregation helpers, DB lifecycle, response shaping for the API"
+    },
+    {
+      "name": "api_entry",
+      "kind": "service",
+      "glob": "apps/api/src/index.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "API app bootstrap and route mounting"
+    },
+    {
+      "name": "web_pages",
+      "kind": "page",
+      "glob": "apps/web/src/pages/**/*.tsx",
+      "symbolPattern": "^export\\s+",
+      "reason": "Top-level dashboard pages (Overview, Sessions, TraceDetail, Settings, Setup)"
+    },
+    {
+      "name": "web_components",
+      "kind": "component",
+      "glob": "apps/web/src/components/**/*.{ts,tsx}",
+      "symbolPattern": "^export\\s+",
+      "reason": "Reusable UI components — charts, tables, layout"
+    },
+    {
+      "name": "web_api_client",
+      "kind": "client",
+      "glob": "apps/web/src/api/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Frontend HTTP client and response type contracts"
+    },
+    {
+      "name": "web_lib",
+      "kind": "service",
+      "glob": "apps/web/src/lib/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Frontend formatting and presentation helpers"
+    },
+    {
+      "name": "web_entry",
+      "kind": "page",
+      "glob": "apps/web/src/{App,main}.tsx",
+      "symbolPattern": "^(export\\s+|function\\s+)",
+      "reason": "Web app bootstrap and root component"
+    }
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.test.tsx",
+    "**/*.spec.tsx",
+    "tests/**",
+    "scripts/**",
+    "__tests__/**"
+  ],
+  "edgeRules": [],
+  "importAliases": {},
+  "trace": {
+    "maxDepth": 4,
+    "excludeTypeOnlyImports": true
+  },
+  "_meta": {
+    "generatedAt": "2026-05-06T19:01:19.211Z",
+    "lastModifiedBy": "kk_init",
+    "projectName": "langcost"
+  },
+  "ignoreCoverage": []
+}

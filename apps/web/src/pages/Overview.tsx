@@ -5,6 +5,7 @@ import {
   getRecommendations,
   type OverviewResponse,
   type Recommendation,
+  type WarpArbitrageAggregate,
 } from "../api/client";
 import { CostTimeline } from "../components/charts/CostTimeline";
 import { formatCompactInt, formatPercent, formatRelativeTime, formatUsd } from "../lib/format";
@@ -135,6 +136,9 @@ export function Overview({ refreshToken, onNavigate, source, billingMode }: Over
           <CostTimeline data={overview.costByDay} />
         </section>
       ) : null}
+
+      <WarpArbitrageCard arbitrage={overview.warpArbitrage} />
+
 
       {overview.byProject?.length > 0 ? (
         <section className="panel p-5">
@@ -308,5 +312,53 @@ export function Overview({ refreshToken, onNavigate, source, billingMode }: Over
         </div>
       </section>
     </div>
+  );
+}
+
+function WarpArbitrageCard({ arbitrage }: { arbitrage: WarpArbitrageAggregate | null }) {
+  if (!arbitrage || arbitrage.comparedTraces === 0) return null;
+
+  const { totalPaidUsd, totalApiEquivalentUsd, markupPct, comparedTraces, totalWarpTraces } =
+    arbitrage;
+  const cheaper = markupPct < 0;
+  const deltaTone = cheaper ? "text-emerald-300" : "text-amber-300";
+  const headline = cheaper ? "Warp cheaper than direct API" : "Warp markup vs direct API";
+  const skipped = totalWarpTraces - comparedTraces;
+
+  return (
+    <section className="panel p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="section-kicker">Warp arbitrage</div>
+          <h2 className="mt-2 text-lg font-semibold text-slate-100">{headline}</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Aggregate of what you paid Warp vs. the same tokens at direct provider rates across{" "}
+            {comparedTraces} session{comparedTraces === 1 ? "" : "s"}.
+            {skipped > 0
+              ? ` ${skipped} additional Warp session${skipped === 1 ? "" : "s"} excluded (model not yet priced).`
+              : null}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="soft-card">
+          <div className="text-xs text-slate-500">Paid (Warp)</div>
+          <div className="mt-1 text-xl font-semibold text-slate-50">{formatUsd(totalPaidUsd)}</div>
+        </div>
+        <div className="soft-card">
+          <div className="text-xs text-slate-500">API-equivalent</div>
+          <div className="mt-1 text-xl font-semibold text-slate-50">
+            {formatUsd(totalApiEquivalentUsd)}
+          </div>
+        </div>
+        <div className="soft-card">
+          <div className="text-xs text-slate-500">Markup</div>
+          <div className={`mt-1 text-xl font-semibold ${deltaTone}`}>
+            {cheaper ? "−" : "+"}
+            {formatPercent(Math.abs(markupPct))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
