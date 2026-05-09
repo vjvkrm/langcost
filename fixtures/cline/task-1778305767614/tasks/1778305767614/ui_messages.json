@@ -1,0 +1,42 @@
+[
+  {
+    "ts": 1778305767614,
+    "type": "say",
+    "say": "task",
+    "text": "Add a Cline adapter"
+  },
+  {
+    "ts": 1778305770000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"POST /chat/completions\",\"tokensIn\":3,\"tokensOut\":187,\"cacheWrites\":10286,\"cacheReads\":0,\"cost\":0.082773}",
+    "modelInfo": {
+      "providerId": "openrouter",
+      "modelId": "anthropic/claude-sonnet-4.5",
+      "mode": "plan"
+    }
+  },
+  {
+    "ts": 1778305770500,
+    "type": "say",
+    "say": "text",
+    "text": "I will inspect the repo."
+  },
+  {
+    "ts": 1778305780000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"POST /chat/completions\",\"tokensIn\":9,\"tokensOut\":653,\"cacheWrites\":12682,\"cacheReads\":49324,\"cost\":0.1443534}",
+    "modelInfo": {
+      "providerId": "openrouter",
+      "modelId": "anthropic/claude-sonnet-4.5",
+      "mode": "act"
+    }
+  },
+  {
+    "ts": 1778305780500,
+    "type": "say",
+    "say": "text",
+    "text": "Adapter files are ready."
+  }
+]

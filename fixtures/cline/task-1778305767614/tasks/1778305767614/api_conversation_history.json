@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "Add a Cline adapter"
+  },
+  {
+    "role": "assistant",
+    "content": "I will inspect the repo."
+  }
+]

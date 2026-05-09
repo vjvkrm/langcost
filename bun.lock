@@ -46,6 +46,14 @@
         "@langcost/db": "workspace:*",
       },
     },
+    "packages/adapter-cline": {
+      "name": "@langcost/adapter-cline",
+      "version": "0.1.0",
+      "dependencies": {
+        "@langcost/core": "workspace:*",
+        "@langcost/db": "workspace:*",
+      },
+    },
     "packages/adapter-openclaw": {
       "name": "@langcost/adapter-openclaw",
       "version": "0.1.5",
@@ -193,6 +201,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@langcost/adapter-claude-code": ["@langcost/adapter-claude-code@workspace:packages/adapter-claude-code"],
+
+    "@langcost/adapter-cline": ["@langcost/adapter-cline@workspace:packages/adapter-cline"],
 
     "@langcost/adapter-openclaw": ["@langcost/adapter-openclaw@workspace:packages/adapter-openclaw"],
 

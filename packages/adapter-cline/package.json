@@ -1,0 +1,28 @@
+{
+  "name": "@langcost/adapter-cline",
+  "version": "0.1.0",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "Cline adapter for langcost - reads VS Code task history",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vjvkrm/langcost.git",
+    "directory": "packages/adapter-cline"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@langcost/core": "workspace:*",
+    "@langcost/db": "workspace:*"
+  }
+}

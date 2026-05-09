@@ -1,0 +1,15 @@
+[
+  {
+    "id": "1778305767614",
+    "ulid": "01HXCLINEFIXTURE0000000000",
+    "ts": 1778305783963,
+    "task": "Add a Cline adapter",
+    "tokensIn": 12,
+    "tokensOut": 840,
+    "cacheWrites": 22968,
+    "cacheReads": 49324,
+    "totalCost": 0.2271264,
+    "cwdOnTaskInitialization": "/Users/tomdootson/Projects/langcost",
+    "modelId": "anthropic/claude-sonnet-4.5"
+  }
+]
