@@ -70,11 +70,13 @@ Scanned 12 sessions
 npm install -g langcost @langcost/adapter-claude-code
 # or: npm install -g langcost @langcost/adapter-openclaw
 # or: npm install -g langcost @langcost/adapter-warp
+# or: npm install -g langcost @langcost/adapter-cline
 
 # Scan your sessions
 langcost scan --source claude-code
 # or: langcost scan --source openclaw
 # or: langcost scan --source warp
+# or: langcost scan --source cline
 
 # Open the dashboard
 langcost dashboard
@@ -120,11 +122,13 @@ LangCost uses a plugin architecture — adapters translate agent-specific data i
 | **Claude Code** | `@langcost/adapter-claude-code` | `~/.claude/projects/` | JSONL session logs from the Claude Code CLI |
 | **OpenClaw** | `@langcost/adapter-openclaw` | `~/.openclaw/` | JSONL session logs from OpenClaw agents |
 | **Warp** | `@langcost/adapter-warp` | `~/Library/Group Containers/.../warp.sqlite` | Oz agent sessions from Warp's local SQLite database |
+| **Cline** | `@langcost/adapter-cline` | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/` | VS Code extension task history from Cline |
 
 ```bash
 # Use multiple adapters — scan from different sources into the same DB
 langcost scan --source claude-code
 langcost scan --source openclaw
+langcost scan --source cline
 langcost dashboard  # unified view across all sources
 ```
 
@@ -287,7 +291,7 @@ Using a self-hosted or unlisted model? Costs show as $0 but all token counts and
 
 ```
 langcost scan --source <adapter> [options]
-  --source <adapter>      Required. e.g. "claude-code", "openclaw"
+  --source <adapter>      Required. e.g. "claude-code", "openclaw", "cline"
   --path <path>           Override data source path
   --file <path>           Analyze a single session file
   --warp-plan <plan>      Warp-only: build | business | add-on-low | add-on-high | byok
