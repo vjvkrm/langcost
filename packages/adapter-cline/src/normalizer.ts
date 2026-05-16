@@ -13,12 +13,23 @@ import type {
 
 type CostSource = "cline" | "taskHistory" | "apiConversationHistory" | "missing" | "zeroStored";
 
+interface UsageRepairResult {
+  usage: ClineApiRequestUsage | undefined;
+  repaired: boolean;
+  costSource?: CostSource;
+}
+
+interface PresentUsageRepairResult extends UsageRepairResult {
+  usage: ClineApiRequestUsage;
+}
+
 interface UsageEvent {
   message: ClineUiMessage;
   messageIndex: number;
   name: string;
   source: string;
   usage: ClineApiRequestUsage;
+  costSource?: CostSource;
   repairedFromApiHistory?: boolean;
   apiHistoryMessage?: ClineApiConversationMessage;
   pairedFinishIndex?: number;
@@ -170,7 +181,7 @@ function metricNumber(value: unknown): number | undefined {
 function repairUsageFromApiHistory(
   usage: ClineApiRequestUsage,
   apiHistoryMessage: ClineApiConversationMessage | undefined,
-): { usage: ClineApiRequestUsage; repaired: boolean } {
+): PresentUsageRepairResult {
   const metrics = apiHistoryMessage?.metrics;
   if (!metrics) return { usage, repaired: false };
 
@@ -226,9 +237,11 @@ function repairUsageFromApiHistory(
 
 function usageFromApiHistory(
   apiHistoryMessage: ClineApiConversationMessage | undefined,
-): ClineApiRequestUsage | undefined {
+): UsageRepairResult {
   const repaired = repairUsageFromApiHistory({}, apiHistoryMessage);
-  return repaired.repaired ? repaired.usage : undefined;
+  return repaired.repaired
+    ? { usage: repaired.usage, repaired: false, costSource: "apiConversationHistory" }
+    : { usage: undefined, repaired: false };
 }
 
 function apiHistoryForMessage(
@@ -314,7 +327,7 @@ function collectUsageEvents(
       const usage = combineStartedWithLegacyFinish(message, finishMessage);
       const repairResult = usage
         ? repairUsageFromApiHistory(usage, apiHistoryMessage)
-        : { usage: usageFromApiHistory(apiHistoryMessage), repaired: true };
+        : usageFromApiHistory(apiHistoryMessage);
       const repaired = repairResult.usage;
       if (repaired) {
         const event: UsageEvent = {
@@ -323,6 +336,7 @@ function collectUsageEvents(
           name: finishMessage ? "api_req_started+finished" : "api_req_started",
           source: finishMessage ? "api_req_finished" : "api_req_started",
           usage: repaired,
+          ...(repairResult.costSource ? { costSource: repairResult.costSource } : {}),
           repairedFromApiHistory: repairResult.repaired,
           ...(apiHistoryMessage ? { apiHistoryMessage } : {}),
           ...(finishIndex !== undefined ? { pairedFinishIndex: finishIndex } : {}),
@@ -370,6 +384,7 @@ function collectUsageEvents(
 function totalsFromUsage(
   usage: ClineApiRequestUsage,
   repairedFromApiHistory: boolean,
+  costSource?: CostSource,
 ): UsageTotals {
   const costIsStored = typeof usage.cost === "number";
   return {
@@ -378,13 +393,15 @@ function totalsFromUsage(
     cacheWrites: usage.cacheWrites ?? 0,
     cacheReads: usage.cacheReads ?? 0,
     costUsd: usage.cost ?? 0,
-    costSource: costIsStored
-      ? usage.cost === 0
-        ? "zeroStored"
-        : repairedFromApiHistory
-          ? "apiConversationHistory"
-          : "cline"
-      : "missing",
+    costSource:
+      costSource ??
+      (costIsStored
+        ? usage.cost === 0
+          ? "zeroStored"
+          : repairedFromApiHistory
+            ? "apiConversationHistory"
+            : "cline"
+        : "missing"),
     complete: usageIsComplete(usage),
   };
 }
@@ -396,8 +413,7 @@ function addTotals(accumulator: UsageTotals, value: UsageTotals): UsageTotals {
     cacheWrites: accumulator.cacheWrites + value.cacheWrites,
     cacheReads: accumulator.cacheReads + value.cacheReads,
     costUsd: accumulator.costUsd + value.costUsd,
-    costSource:
-      accumulator.costSource === value.costSource ? accumulator.costSource : accumulator.costSource,
+    costSource: aggregateCostSource([accumulator.costSource, value.costSource], "missing"),
     complete: accumulator.complete && value.complete,
   };
 }
@@ -463,6 +479,8 @@ export function normalizeTask(
 
   const apiConversationHistory = readResult.apiConversationHistory ?? [];
   const events = collectUsageEvents(readResult.uiMessages, apiConversationHistory);
+  const uiAssistantTextMessages = assistantTextMessages(readResult.uiMessages);
+  const hasUiAssistantText = uiAssistantTextMessages.length > 0;
   const spanEvents: Array<{ span: SpanRecord; event: UsageEvent }> = [];
   const spanCostSources: CostSource[] = [];
   let aggregate: UsageTotals = {
@@ -482,7 +500,7 @@ export function normalizeTask(
       ? { usage: event.usage, repaired: true }
       : repairUsageFromApiHistory(event.usage, event.apiHistoryMessage);
     const usage = repaired.usage;
-    const totals = totalsFromUsage(usage, repaired.repaired);
+    const totals = totalsFromUsage(usage, repaired.repaired, event.costSource);
     const spanId = llmSpanId(taskId, index);
     const provider = parseProvider(modelInfo);
     const model = parseModel(modelInfo, fallbackModel);
@@ -558,7 +576,7 @@ export function normalizeTask(
       positionBySpanId.set(firstSpan.id, 1);
     }
 
-    for (const { message, messageIndex } of assistantTextMessages(readResult.uiMessages)) {
+    for (const { message, messageIndex } of uiAssistantTextMessages) {
       const span = spanForTextMessage(message, messageIndex, spanEvents) ?? firstSpan;
       const position = positionBySpanId.get(span.id) ?? 0;
       const content = message.text ?? "";
@@ -584,7 +602,7 @@ export function normalizeTask(
 
     for (const event of events) {
       if (event.apiHistoryMessage?.role !== "assistant") continue;
-      if (assistantTextMessages(readResult.uiMessages).length > 0) break;
+      if (hasUiAssistantText) break;
       const span = spanEvents.find((candidate) => candidate.event === event)?.span;
       if (!span) continue;
       const content = contentToText(event.apiHistoryMessage.content);
