@@ -43,7 +43,7 @@ export interface ScanCommandOptions {
   sourcePath?: string;
   file?: string;
   warpPlan?: WarpPlanOption;
-  since?: Date;
+  since: Date;
   force: boolean;
   dbPath?: string;
   apiKey?: string;

@@ -1,33 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  getHealth,
-  getSettings,
-  getSources,
-  type HealthResponse,
-  type SettingsResponse,
-  type SourceInfo,
-  triggerScan,
-} from "./api/client";
+import { getSources, type SourceInfo, triggerScan } from "./api/client";
 import { Header } from "./components/layout/Header";
 import { Overview } from "./pages/Overview";
 import { Sessions } from "./pages/Sessions";
 import { Settings } from "./pages/Settings";
-import { Setup } from "./pages/Setup";
 import { TraceDetail } from "./pages/TraceDetail";
 
 type Route =
-  | { page: "setup" }
   | { page: "traces" }
   | { page: "overview" }
   | { page: "settings" }
   | { page: "trace"; traceId: string };
 
-function parseRoute(pathname: string, configured: boolean): Route {
-  if (!configured) {
-    return { page: "setup" };
-  }
-
+function parseRoute(pathname: string): Route {
   if (pathname.startsWith("/traces/")) {
     const traceId = pathname.replace(/^\/traces\//, "");
     return { page: "trace", traceId: decodeURIComponent(traceId) };
@@ -46,8 +32,6 @@ function parseRoute(pathname: string, configured: boolean): Route {
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
-  const [settings, setSettings] = useState<SettingsResponse | null>(null);
-  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") {
       return "dark";
@@ -89,6 +73,12 @@ export default function App() {
     window.localStorage.setItem("langcost-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (banner === null || bannerTone !== "info") return;
+    const timer = window.setTimeout(() => setBanner(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [banner, bannerTone]);
+
   function handleSourceChange(source: string | undefined) {
     setActiveSource(source);
     if (source) {
@@ -105,16 +95,9 @@ export default function App() {
   }
 
   async function reloadShell() {
-    const [nextSettings, nextHealth, nextSources] = await Promise.all([
-      getSettings(),
-      getHealth(),
-      getSources(),
-    ]);
-    setSettings(nextSettings);
-    setHealth(nextHealth);
+    const nextSources = await getSources();
     setSources(nextSources.sources);
 
-    // Auto-select source if only one exists or saved source is no longer valid
     const sourceNames = nextSources.sources.map((s) => s.name);
     if (activeSource && !sourceNames.includes(activeSource)) {
       handleSourceChange(sourceNames[0]);
@@ -130,21 +113,14 @@ export default function App() {
 
     void (async () => {
       try {
-        const [nextSettings, nextHealth, nextSources] = await Promise.all([
-          getSettings(),
-          getHealth(),
-          getSources(),
-        ]);
+        const nextSources = await getSources();
 
         if (!active) {
           return;
         }
 
-        setSettings(nextSettings);
-        setHealth(nextHealth);
         setSources(nextSources.sources);
 
-        // Auto-select source
         const sourceNames = nextSources.sources.map((s) => s.name);
         const saved = window.localStorage.getItem("langcost-source") ?? undefined;
         if (saved && sourceNames.includes(saved)) {
@@ -173,8 +149,8 @@ export default function App() {
     };
   }, []);
 
-  const configured = Boolean(settings?.source);
-  const route = useMemo(() => parseRoute(pathname, configured), [configured, pathname]);
+  const hasData = sources.length > 0;
+  const route = useMemo(() => parseRoute(pathname), [pathname]);
   const activePath = route.page === "trace" || route.page === "traces" ? "/" : pathname;
 
   function navigate(path: string) {
@@ -185,8 +161,17 @@ export default function App() {
     setPathname(path);
   }
 
+  useEffect(() => {
+    if (loadingShell) return;
+    if (hasData) return;
+    if (pathname === "/settings") return;
+    if (pathname === "/" || pathname === "/overview") {
+      navigate("/settings");
+    }
+  }, [loadingShell, hasData, pathname]);
+
   async function handleRefresh() {
-    if (!configured) {
+    if (!hasData || !activeSource) {
       return;
     }
 
@@ -196,8 +181,7 @@ export default function App() {
     try {
       const result = await triggerScan(false, activeSource);
       await reloadShell();
-      const sourceLabel = activeSource ? ` from ${activeSource}` : "";
-      setBanner(`Refresh complete. Ingested ${result.tracesIngested} new traces${sourceLabel}.`);
+      setBanner(`Refresh complete. Ingested ${result.tracesIngested} new traces from ${activeSource}.`);
       setBannerTone("info");
     } catch (cause) {
       setBanner(cause instanceof Error ? cause.message : "Refresh failed.");
@@ -205,17 +189,6 @@ export default function App() {
     } finally {
       setRefreshing(false);
     }
-  }
-
-  async function handleConfigured() {
-    await reloadShell();
-    navigate("/");
-  }
-
-  async function handleSettingsSaved() {
-    await reloadShell();
-    setBanner("Settings saved.");
-    setBannerTone("info");
   }
 
   if (loadingShell) {
@@ -229,7 +202,6 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <Header
-        configured={configured}
         currentPath={activePath}
         onNavigate={navigate}
         onRefresh={() => void handleRefresh()}
@@ -255,9 +227,6 @@ export default function App() {
           </div>
         ) : null}
 
-        {route.page === "setup" ? (
-          <Setup initialSettings={settings} onConfigured={handleConfigured} />
-        ) : null}
         {route.page === "traces" ? (
           <Sessions
             refreshToken={refreshToken}
@@ -274,15 +243,7 @@ export default function App() {
             billingMode={billingMode}
           />
         ) : null}
-        {route.page === "settings" ? (
-          <Settings
-            settings={settings}
-            health={health}
-            refreshing={refreshing}
-            onSettingsSaved={handleSettingsSaved}
-            onRefreshData={handleRefresh}
-          />
-        ) : null}
+        {route.page === "settings" ? <Settings onShellRefresh={reloadShell} /> : null}
         {route.page === "trace" ? (
           <TraceDetail
             traceId={route.traceId}

@@ -159,13 +159,15 @@ describe("langcost", () => {
     }
   });
 
-  it("parses --since with a 30 day default and allows all", () => {
+  it("parses --since with a 180-day default and rejects unbounded/over-cap values", () => {
     const now = new Date("2026-03-21T12:00:00.000Z");
     const parsed = parseSinceArgument(undefined, now);
 
-    expect(parsed?.toISOString()).toBe("2026-02-19T12:00:00.000Z");
-    expect(parseSinceArgument("90d", now)?.toISOString()).toBeDefined();
-    expect(parseSinceArgument("all", now)).toBeUndefined();
+    // 180 days before 2026-03-21
+    expect(parsed.toISOString()).toBe("2025-09-22T12:00:00.000Z");
+    expect(parseSinceArgument("90d", now).toISOString()).toBeDefined();
+    expect(() => parseSinceArgument("all", now)).toThrow("180 days");
+    expect(() => parseSinceArgument("365d", now)).toThrow("180-day maximum");
   });
 
   it("parses --warp-plan for Warp scans", () => {

@@ -1,37 +1,70 @@
 {
   "version": 1,
   "stack": {
-    "detected": ["generic", "react", "drizzle"],
-    "enabled": ["generic", "react", "drizzle"],
+    "detected": [
+      "generic",
+      "react",
+      "drizzle"
+    ],
+    "enabled": [
+      "generic",
+      "react",
+      "drizzle"
+    ],
     "disabled": []
   },
   "workspaces": {
     "apps/api": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
     },
     "apps/web": {
-      "adapters": ["react", "generic"]
+      "adapters": [
+        "react",
+        "generic"
+      ]
     },
     "packages/adapter-claude-code": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
+    },
+    "packages/adapter-cline": {
+      "adapters": [
+        "generic"
+      ]
     },
     "packages/adapter-openclaw": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
     },
     "packages/adapter-warp": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
     },
     "packages/analyzers": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
     },
     "packages/cli": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
     },
     "packages/core": {
-      "adapters": ["generic"]
+      "adapters": [
+        "generic"
+      ]
     },
     "packages/db": {
-      "adapters": ["drizzle", "generic"]
+      "adapters": [
+        "drizzle",
+        "generic"
+      ]
     }
   },
   "customBoundaries": [
@@ -83,6 +116,13 @@
       "glob": "packages/adapter-claude-code/src/**/*.ts",
       "symbolPattern": "^export\\s+",
       "reason": "Claude Code adapter — ingests ~/.claude/projects session logs"
+    },
+    {
+      "name": "adapter_cline",
+      "kind": "adapter",
+      "glob": "packages/adapter-cline/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "Cline (VS Code) adapter — ingests Cline task history from VS Code globalStorage"
     },
     {
       "name": "api_routes",
@@ -157,9 +197,12 @@
     "excludeTypeOnlyImports": true
   },
   "_meta": {
-    "generatedAt": "2026-05-10T06:09:18.681Z",
+    "generatedAt": "2026-05-17T14:21:41.190Z",
     "lastModifiedBy": "kk_init",
     "projectName": "langcost"
   },
-  "ignoreCoverage": []
+  "ignoreCoverage": [
+    "packages/core/src/index.ts",
+    "packages/cli/src/types.ts"
+  ]
 }

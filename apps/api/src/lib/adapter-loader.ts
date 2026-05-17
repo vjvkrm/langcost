@@ -1,5 +1,12 @@
 import type { IAdapter } from "@langcost/core";
 
+export type AdapterInstallType = "npm" | "workspace";
+
+export interface LoadedAdapter {
+  adapter: IAdapter;
+  installType: AdapterInstallType;
+}
+
 async function importModule(specifier: string) {
   return import(specifier);
 }
@@ -27,8 +34,17 @@ async function importWorkspaceAdapter(name: string): Promise<IAdapter | null> {
   }
 }
 
+export async function tryLoadAdapterWithSource(name: string): Promise<LoadedAdapter | null> {
+  const fromNpm = await importInstalledAdapter(name);
+  if (fromNpm) return { adapter: fromNpm, installType: "npm" };
+  const fromWorkspace = await importWorkspaceAdapter(name);
+  if (fromWorkspace) return { adapter: fromWorkspace, installType: "workspace" };
+  return null;
+}
+
 export async function tryLoadAdapter(name: string): Promise<IAdapter | null> {
-  return (await importInstalledAdapter(name)) ?? (await importWorkspaceAdapter(name));
+  const loaded = await tryLoadAdapterWithSource(name);
+  return loaded?.adapter ?? null;
 }
 
 export async function loadAdapter(name: string): Promise<IAdapter> {

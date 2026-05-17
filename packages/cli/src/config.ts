@@ -1,3 +1,5 @@
+import { MAX_SINCE_DAYS, MAX_SINCE_MS } from "@langcost/core";
+
 import type {
   CliCommand,
   DashboardCommandOptions,
@@ -11,7 +13,7 @@ const HELP_TEXT = `langcost scan --source <adapter> [options]
   --path <path>           Override default data source root directory
   --file <path>           Analyze a single session file (skips discovery)
   --warp-plan <plan>      Warp-only: build | business | add-on-low | add-on-high | byok
-  --since <duration|date> Default: 30d. Accepts: 7d, 30d, 90d, 2026-01-01, all
+  --since <duration|date> Default: 180d. Max: 180d. Accepts: 7d, 30d, 90d, 2026-01-01
   --force                 Re-ingest and re-analyze everything
   --db <path>             Override database path
 
@@ -113,13 +115,17 @@ function getStringFlag(flags: Map<string, string | boolean>, key: string): strin
 /** OSS limit: keep at most 500 traces in the database. */
 export const MAX_TRACES_OSS = 500;
 
-export function parseSinceArgument(value: string | undefined, now = new Date()): Date | undefined {
+export function parseSinceArgument(value: string | undefined, now = new Date()): Date {
+  const earliestAllowed = new Date(now.getTime() - MAX_SINCE_MS);
+
   if (value === undefined) {
-    return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return earliestAllowed;
   }
 
   if (value.toLowerCase() === "all") {
-    return undefined;
+    invalid(
+      `--since "all" is not supported; the maximum window is ${MAX_SINCE_DAYS} days. Pass a shorter duration like 30d.`,
+    );
   }
 
   const durationMatch = value.match(/^(\d+)d$/i);
@@ -129,12 +135,22 @@ export function parseSinceArgument(value: string | undefined, now = new Date()):
       invalid(`Invalid --since value: ${value}`);
     }
 
+    if (days > MAX_SINCE_DAYS) {
+      invalid(`--since ${value} exceeds the ${MAX_SINCE_DAYS}-day maximum.`);
+    }
+
     return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   }
 
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     invalid(`Invalid --since value: ${value}`);
+  }
+
+  if (parsed.getTime() < earliestAllowed.getTime()) {
+    invalid(
+      `--since ${value} is older than the ${MAX_SINCE_DAYS}-day maximum window (earliest allowed: ${earliestAllowed.toISOString().slice(0, 10)}).`,
+    );
   }
 
   return parsed;
@@ -165,7 +181,7 @@ function parseScan(flags: Map<string, string | boolean>, now: Date): ScanCommand
     ...(sourcePath ? { sourcePath } : {}),
     ...(file ? { file } : {}),
     ...(selectedWarpPlan ? { warpPlan: selectedWarpPlan } : {}),
-    ...(since ? { since } : {}),
+    since,
     force: flags.get("force") === true,
     ...(dbPath ? { dbPath } : {}),
     ...(apiKey ? { apiKey } : {}),

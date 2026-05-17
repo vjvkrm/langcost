@@ -95,7 +95,7 @@ export function createApiApp(options: ApiAppOptions = {}) {
   const routeOptions = options.dbPath ? { dbPath: options.dbPath } : {};
   const distPath = resolveWebDistPath(options.webDistPath);
 
-  app.route("/api/v1/adapters", createAdaptersRoute());
+  app.route("/api/v1/adapters", createAdaptersRoute(routeOptions));
   app.route("/api/v1/health", createHealthRoute(routeOptions));
   app.route("/api/v1/settings", createSettingsRoute(routeOptions));
   app.route("/api/v1/sources", createSourcesRoute(routeOptions));

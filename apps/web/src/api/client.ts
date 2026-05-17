@@ -480,3 +480,45 @@ export async function getSegmentBreakdown(
 export async function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/health");
 }
+
+export type AdapterInstallType = "npm" | "workspace";
+
+interface AdapterStatusBase {
+  name: string;
+  label: string;
+  traceCount: number;
+  lastScanAt: string | null;
+}
+
+export interface InstalledAdapter extends AdapterStatusBase {
+  installed: true;
+  version: string;
+  installType: AdapterInstallType;
+}
+
+export interface MissingAdapter extends AdapterStatusBase {
+  installed: false;
+  installCommand: string;
+}
+
+export type AdapterStatus = InstalledAdapter | MissingAdapter;
+
+export interface AdaptersResponse {
+  adapters: AdapterStatus[];
+}
+
+export async function getAdapters(): Promise<AdaptersResponse> {
+  return request<AdaptersResponse>("/adapters");
+}
+
+export async function installAdapter(name: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/adapters/${encodeURIComponent(name)}`, {
+    method: "POST",
+  });
+}
+
+export async function uninstallAdapter(name: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/adapters/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+}
