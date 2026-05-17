@@ -223,7 +223,7 @@ describe("normalizeTask", () => {
           type: "say",
           say: "api_req_started",
           conversationHistoryIndex: 0,
-          text: JSON.stringify({ request: "POST /chat/completions" }),
+          text: JSON.stringify({ request: "POST /chat/completions", tokensIn: 11 }),
         },
       ],
       {
@@ -245,6 +245,42 @@ describe("normalizeTask", () => {
     expect(normalized.spans[0]?.metadata).toMatchObject({
       costSource: "apiConversationHistory",
       repairedFromApiConversationHistory: true,
+    });
+    expect(normalized.trace.totalInputTokens).toBe(16);
+    expect(normalized.trace.totalOutputTokens).toBe(6);
+    expect(normalized.trace.totalCostUsd).toBe(0.01);
+  });
+
+  it("does not mark api_conversation_history-only usage as repaired", () => {
+    const normalized = normalizeInline(
+      [
+        {
+          ts: 1,
+          type: "say",
+          say: "api_req_started",
+          conversationHistoryIndex: 0,
+          text: JSON.stringify({ request: "POST /chat/completions" }),
+        },
+      ],
+      {
+        apiConversationHistory: [
+          { role: "user", content: "hello" },
+          {
+            role: "assistant",
+            content: "hi",
+            metrics: {
+              tokens: { prompt: 11, completion: 6, cacheWrites: 2, cacheReads: 3 },
+              cost: 0.01,
+            },
+          },
+        ],
+      },
+    );
+
+    expect(normalized.spans).toHaveLength(1);
+    expect(normalized.spans[0]?.metadata).toMatchObject({
+      costSource: "apiConversationHistory",
+      repairedFromApiConversationHistory: false,
     });
     expect(normalized.trace.totalInputTokens).toBe(16);
     expect(normalized.trace.totalOutputTokens).toBe(6);
