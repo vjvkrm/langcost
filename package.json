@@ -1,14 +1,14 @@
 {
   "name": "langcost-monorepo",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.16.0",
   "description": "Cost intelligence and fault attribution for AI agent systems",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
-    "build": "bun run --cwd packages/adapter-cline build",
+    "build": "bun run --cwd packages/core build && bun run --cwd packages/db build && bun run --cwd packages/analyzers build && bun run --cwd packages/adapter-openclaw build && bun run --cwd packages/adapter-claude-code build && bun run --cwd packages/adapter-warp build && bun run --cwd packages/adapter-cline build && bun run --cwd packages/adapter-codex build",
     "test": "bun test",
     "test:core": "bun test packages/core",
     "test:db": "bun test packages/db",

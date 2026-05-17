@@ -27,6 +27,7 @@ const packages: ReleasePackage[] = [
   { dir: "packages/adapter-claude-code", access: "public" },
   { dir: "packages/adapter-cline", access: "public" },
   { dir: "packages/adapter-warp", access: "public" },
+  { dir: "packages/adapter-codex", access: "public" },
   { dir: "packages/cli", access: "public" },
 ];
 

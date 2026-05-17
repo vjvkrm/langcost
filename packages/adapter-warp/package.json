@@ -1,15 +1,19 @@
 {
   "name": "@langcost/adapter-warp",
-  "version": "0.1.6",
+  "version": "0.16.0",
   "type": "module",
   "publishConfig": {
     "access": "public"
   },
   "files": [
-    "src"
+    "dist"
   ],
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "description": "Warp adapter for langcost — reads AI session data from warp.sqlite",
   "license": "AGPL-3.0",
@@ -19,6 +23,7 @@
     "directory": "packages/adapter-warp"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "bun test"
   },
   "dependencies": {

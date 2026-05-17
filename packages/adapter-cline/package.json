@@ -1,6 +1,6 @@
 {
   "name": "@langcost/adapter-cline",
-  "version": "0.1.6",
+  "version": "0.16.0",
   "type": "module",
   "publishConfig": {
     "access": "public"
