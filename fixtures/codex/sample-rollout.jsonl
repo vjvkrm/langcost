@@ -1,0 +1,16 @@
+{"timestamp":"2026-05-17T10:00:00.000Z","type":"session_meta","payload":{"id":"019d05b8-0a09-7d61-a091-b15f60154601","timestamp":"2026-05-17T10:00:00.000Z","cwd":"/Users/test/project","cli_version":"0.116.0","model_provider":"openai","base_instructions":{"text":"You are Codex, a coding agent based on GPT-5."},"dynamic_tools":[{"name":"read_thread_terminal","description":"Read the current terminal output."}]}}
+{"timestamp":"2026-05-17T10:00:01.000Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/Users/test/project","model":"gpt-5.4","effort":"high"}}
+{"timestamp":"2026-05-17T10:00:01.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-1","model_context_window":258400}}
+{"timestamp":"2026-05-17T10:00:01.100Z","type":"event_msg","payload":{"type":"user_message","message":"List files in src/"}}
+{"timestamp":"2026-05-17T10:00:02.000Z","type":"response_item","payload":{"type":"reasoning","content":[],"summary":[]}}
+{"timestamp":"2026-05-17T10:00:02.500Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"ls src\"}","call_id":"call_001"}}
+{"timestamp":"2026-05-17T10:00:04.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Found 2 files: adapter.ts and index.ts."}]}}
+{"timestamp":"2026-05-17T10:00:04.600Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1200,"cached_input_tokens":400,"output_tokens":85,"reasoning_output_tokens":50,"total_tokens":1285},"last_token_usage":{"input_tokens":1200,"cached_input_tokens":400,"output_tokens":85,"reasoning_output_tokens":50,"total_tokens":1285},"model_context_window":258400}}}
+{"timestamp":"2026-05-17T10:00:03.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_001","output":"adapter.ts\nindex.ts"}}
+{"timestamp":"2026-05-17T10:00:04.500Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-1","last_agent_message":"Found 2 files: adapter.ts and index.ts."}}
+{"timestamp":"2026-05-17T10:00:10.000Z","type":"turn_context","payload":{"turn_id":"turn-2","model":"gpt-5.4"}}
+{"timestamp":"2026-05-17T10:00:10.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-2"}}
+{"timestamp":"2026-05-17T10:00:10.100Z","type":"event_msg","payload":{"type":"user_message","message":"What model are you?"}}
+{"timestamp":"2026-05-17T10:00:10.500Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I am Codex on GPT-5.4."}]}}
+{"timestamp":"2026-05-17T10:00:11.100Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":500,"cached_input_tokens":300,"output_tokens":12,"reasoning_output_tokens":0,"total_tokens":512},"model_context_window":258400}}}
+{"timestamp":"2026-05-17T10:00:11.000Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-2","last_agent_message":"I am Codex on GPT-5.4."}}

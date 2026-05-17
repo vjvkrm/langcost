@@ -35,6 +35,11 @@
         "generic"
       ]
     },
+    "packages/adapter-codex": {
+      "adapters": [
+        "generic"
+      ]
+    },
     "packages/adapter-openclaw": {
       "adapters": [
         "generic"
@@ -125,6 +130,13 @@
       "reason": "Cline (VS Code) adapter — ingests Cline task history from VS Code globalStorage"
     },
     {
+      "name": "adapter_codex",
+      "kind": "adapter",
+      "glob": "packages/adapter-codex/src/**/*.ts",
+      "symbolPattern": "^export\\s+",
+      "reason": "OpenAI Codex CLI adapter — ingests ~/.codex/sessions rollout files"
+    },
+    {
       "name": "api_routes",
       "kind": "route",
       "glob": "apps/api/src/routes/**/*.ts",
@@ -197,12 +209,14 @@
     "excludeTypeOnlyImports": true
   },
   "_meta": {
-    "generatedAt": "2026-05-17T14:21:41.190Z",
+    "generatedAt": "2026-05-17T15:10:58.327Z",
     "lastModifiedBy": "kk_init",
     "projectName": "langcost"
   },
   "ignoreCoverage": [
     "packages/core/src/index.ts",
-    "packages/cli/src/types.ts"
+    "packages/cli/src/types.ts",
+    "packages/adapter-codex/src/index.ts",
+    "packages/adapter-codex/src/types.ts"
   ]
 }

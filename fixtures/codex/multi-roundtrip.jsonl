@@ -1,0 +1,19 @@
+{"timestamp":"2026-05-17T11:00:00.000Z","type":"session_meta","payload":{"id":"019d05b8-1111-7d61-a091-b15f60154601","timestamp":"2026-05-17T11:00:00.000Z","cwd":"/Users/test/project","cli_version":"0.116.0","model_provider":"openai","base_instructions":{"text":"You are Codex."}}}
+{"timestamp":"2026-05-17T11:00:00.500Z","type":"turn_context","payload":{"turn_id":"turn-A","model":"gpt-5.4"}}
+{"timestamp":"2026-05-17T11:00:01.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-A"}}
+{"timestamp":"2026-05-17T11:00:01.100Z","type":"event_msg","payload":{"type":"user_message","message":"Please list the src directory and then describe what each file does."}}
+{"timestamp":"2026-05-17T11:00:01.200Z","type":"event_msg","payload":{"type":"token_count","info":null}}
+{"timestamp":"2026-05-17T11:00:02.000Z","type":"response_item","payload":{"type":"reasoning","content":[],"summary":[]}}
+{"timestamp":"2026-05-17T11:00:02.200Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"ls src\"}","call_id":"call_A1"}}
+{"timestamp":"2026-05-17T11:00:02.500Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":500,"cached_input_tokens":100,"output_tokens":30,"reasoning_output_tokens":20,"total_tokens":530},"last_token_usage":{"input_tokens":500,"cached_input_tokens":100,"output_tokens":30,"reasoning_output_tokens":20,"total_tokens":530},"model_context_window":258400}}}
+{"timestamp":"2026-05-17T11:00:03.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_A1","output":"adapter.ts\nindex.ts"}}
+{"timestamp":"2026-05-17T11:00:04.000Z","type":"response_item","payload":{"type":"reasoning","content":[],"summary":[]}}
+{"timestamp":"2026-05-17T11:00:04.100Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"cat src/adapter.ts\"}","call_id":"call_A2"}}
+{"timestamp":"2026-05-17T11:00:04.200Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"cat src/index.ts\"}","call_id":"call_A3"}}
+{"timestamp":"2026-05-17T11:00:04.500Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":800,"cached_input_tokens":400,"output_tokens":40,"reasoning_output_tokens":15,"total_tokens":840},"model_context_window":258400}}}
+{"timestamp":"2026-05-17T11:00:05.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_A2","output":"// adapter source"}}
+{"timestamp":"2026-05-17T11:00:05.100Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_A3","output":"// barrel export"}}
+{"timestamp":"2026-05-17T11:00:06.000Z","type":"response_item","payload":{"type":"reasoning","content":[],"summary":[]}}
+{"timestamp":"2026-05-17T11:00:06.200Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"The src directory has adapter.ts (the adapter source) and index.ts (the barrel export)."}]}}
+{"timestamp":"2026-05-17T11:00:06.500Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":1200,"cached_input_tokens":800,"output_tokens":60,"reasoning_output_tokens":10,"total_tokens":1260},"model_context_window":258400}}}
+{"timestamp":"2026-05-17T11:00:07.000Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-A","last_agent_message":"The src directory has adapter.ts (the adapter source) and index.ts (the barrel export)."}}

@@ -1,0 +1,28 @@
+{
+  "name": "@langcost/adapter-codex",
+  "version": "0.1.6",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "OpenAI Codex CLI adapter for langcost — reads local rollout files",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vjvkrm/langcost.git",
+    "directory": "packages/adapter-codex"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@langcost/core": "workspace:*",
+    "@langcost/db": "workspace:*"
+  }
+}

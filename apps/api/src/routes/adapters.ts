@@ -15,6 +15,7 @@ const KNOWN_ADAPTERS: KnownAdapter[] = [
   { name: "claude-code", label: "Claude Code" },
   { name: "warp", label: "Warp" },
   { name: "cline", label: "Cline" },
+  { name: "codex", label: "Codex" },
 ];
 
 interface AdapterStatusBase {
