@@ -52,6 +52,5 @@ Each adapter auto-discovers its source location. If yours isn't in the default s
 | **Claude Code** | `--source claude-code` | `@langcost/adapter-claude-code` | — |
 | **OpenClaw** | `--source openclaw` | `@langcost/adapter-openclaw` | — |
 | **Warp** | `--source warp` | `@langcost/adapter-warp` | `--warp-plan <plan>` — credit-rate assumption for arbitrage reporting. One of `build`, `business`, `add-on-low`, `add-on-high`, `byok`. Default `build`. |
-| **Cline** ⚠️ not on npm yet | `--source cline` | `@langcost/adapter-cline` | — |
-
-> **Cline status:** the package isn't published to npm yet. The dashboard's **Install** button will return a 404 from npm until it is. In the monorepo it works fine as a workspace-linked adapter.
+| **Cline** | `--source cline` | `@langcost/adapter-cline` | — |
+| **Codex** | `--source codex` | `@langcost/adapter-codex` | — |

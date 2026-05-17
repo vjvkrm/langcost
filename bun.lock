@@ -48,7 +48,15 @@
     },
     "packages/adapter-cline": {
       "name": "@langcost/adapter-cline",
-      "version": "0.1.0",
+      "version": "0.1.6",
+      "dependencies": {
+        "@langcost/core": "workspace:*",
+        "@langcost/db": "workspace:*",
+      },
+    },
+    "packages/adapter-codex": {
+      "name": "@langcost/adapter-codex",
+      "version": "0.1.6",
       "dependencies": {
         "@langcost/core": "workspace:*",
         "@langcost/db": "workspace:*",
@@ -203,6 +211,8 @@
     "@langcost/adapter-claude-code": ["@langcost/adapter-claude-code@workspace:packages/adapter-claude-code"],
 
     "@langcost/adapter-cline": ["@langcost/adapter-cline@workspace:packages/adapter-cline"],
+
+    "@langcost/adapter-codex": ["@langcost/adapter-codex@workspace:packages/adapter-codex"],
 
     "@langcost/adapter-openclaw": ["@langcost/adapter-openclaw@workspace:packages/adapter-openclaw"],
 

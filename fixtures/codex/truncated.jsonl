@@ -1,0 +1,5 @@
+{"timestamp":"2026-05-17T12:00:00.000Z","type":"session_meta","payload":{"id":"019d05b8-2222-7d61-a091-b15f60154601","timestamp":"2026-05-17T12:00:00.000Z","cwd":"/Users/test/project","cli_version":"0.116.0","model_provider":"openai","base_instructions":{"text":"You are Codex."}}}
+{"timestamp":"2026-05-17T12:00:00.500Z","type":"turn_context","payload":{"turn_id":"turn-T","model":"gpt-5.4"}}
+{"timestamp":"2026-05-17T12:00:01.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-T"}}
+{"timestamp":"2026-05-17T12:00:01.100Z","type":"event_msg","payload":{"type":"user_message","message":"What can you do?"}}
+{"timestamp":"2026-05-17T12:00:02.000Z","type":"response_item","payload":{"type":"reasoning","content":[],"summary":[]}}
