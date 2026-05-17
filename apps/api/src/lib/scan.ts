@@ -1,4 +1,5 @@
 import { runPipeline } from "@langcost/analyzers";
+import { MAX_SINCE_MS } from "@langcost/core";
 import {
   createSettingsRepository,
   createTraceRepository,
@@ -20,6 +21,7 @@ export interface ScanResultPayload {
 function toAdapterOptions(sourceConfig: SourceSettings & { source: string }, force = false) {
   return {
     ...(sourceConfig.sourcePath ? { sourcePath: sourceConfig.sourcePath } : {}),
+    since: new Date(Date.now() - MAX_SINCE_MS),
     force,
     ...(sourceConfig.apiKey ? { apiKey: sourceConfig.apiKey } : {}),
     ...(sourceConfig.apiUrl ? { apiUrl: sourceConfig.apiUrl } : {}),

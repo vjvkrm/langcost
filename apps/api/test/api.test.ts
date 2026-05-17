@@ -82,28 +82,35 @@ describe("@langcost/api", () => {
     const response = await app.request("/api/v1/adapters");
     expect(response.status).toBe(200);
 
+    type AdapterEntryBase = {
+      name: string;
+      label: string;
+      traceCount: number;
+      lastScanAt: string | null;
+    };
     type AdapterEntry =
-      | { name: string; label: string; installed: true; version: string }
-      | { name: string; label: string; installed: false; installCommand: string };
+      | (AdapterEntryBase & { installed: true; version: string; installType: "npm" | "workspace" })
+      | (AdapterEntryBase & { installed: false; installCommand: string });
 
     const payload = await readJson<{ adapters: AdapterEntry[] }>(response);
 
-    const names = payload.adapters.map((entry) => entry.name).sort();
-    expect(names).toEqual(["claude-code", "openclaw", "warp"]);
-
-    const labelByName = Object.fromEntries(
-      payload.adapters.map((entry) => [entry.name, entry.label]),
-    );
-    expect(labelByName).toEqual({
-      openclaw: "OpenClaw",
-      "claude-code": "Claude Code",
-      warp: "Warp",
-    });
+    // Catalog must at least cover the adapter packages shipped in the monorepo.
+    // Asserting `toContain` (not strict equality) lets new adapters land without
+    // editing this test — only forgetting to register one in KNOWN_ADAPTERS fails it.
+    const names = new Set(payload.adapters.map((entry) => entry.name));
+    for (const expected of ["openclaw", "claude-code", "warp", "cline"]) {
+      expect(names.has(expected)).toBe(true);
+    }
 
     for (const entry of payload.adapters) {
+      expect(typeof entry.label).toBe("string");
+      expect(entry.label.length).toBeGreaterThan(0);
+      expect(typeof entry.traceCount).toBe("number");
+
       if (entry.installed) {
         expect(typeof entry.version).toBe("string");
         expect(entry.version.length).toBeGreaterThan(0);
+        expect(["npm", "workspace"]).toContain(entry.installType);
         expect("installCommand" in entry).toBe(false);
       } else {
         expect(entry.installCommand).toBe(`npm install -g @langcost/adapter-${entry.name}`);
@@ -112,7 +119,7 @@ describe("@langcost/api", () => {
     }
 
     // In the workspace dev environment every known adapter resolves via the
-    // workspace fallback in tryLoadAdapter, so all three should report installed.
+    // workspace fallback in tryLoadAdapter, so all of them should report installed.
     expect(payload.adapters.every((entry) => entry.installed)).toBe(true);
   });
 

@@ -1,7 +1,6 @@
 import type { SourceInfo } from "../../api/client";
 
 interface HeaderProps {
-  configured: boolean;
   currentPath: string;
   onNavigate: (path: string) => void;
   onRefresh: () => void;
@@ -24,11 +23,10 @@ const SOURCE_LABELS: Record<string, string> = {
 const NAV_ITEMS = [
   { path: "/", label: "Traces" },
   { path: "/overview", label: "Overview" },
-  { path: "/settings", label: "Settings" },
+  { path: "/settings", label: "Adapters" },
 ];
 
 export function Header({
-  configured,
   currentPath,
   onNavigate,
   onRefresh,
@@ -41,6 +39,7 @@ export function Header({
   billingMode,
   onBillingModeChange,
 }: HeaderProps) {
+  const hasData = sources.length > 0;
   return (
     <header className="site-header fixed inset-x-0 top-0 z-20 border-b border-[color:var(--border)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1480px] items-center justify-between gap-4 px-4 py-3 sm:px-6 xl:px-10">
@@ -62,31 +61,25 @@ export function Header({
             </span>
           </button>
 
-          {configured ? (
-            <nav className="hidden items-center gap-1 md:flex">
-              {NAV_ITEMS.map((item) => {
-                const active = currentPath === item.path;
-                return (
-                  <button
-                    key={item.path}
-                    type="button"
-                    onClick={() => onNavigate(item.path)}
-                    className={`nav-pill ${active ? "nav-pill-active" : ""}`}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </nav>
-          ) : (
-            <p className="hidden text-sm text-slate-400 md:block">
-              Connect a source to explore traces, costs, and waste.
-            </p>
-          )}
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_ITEMS.map((item) => {
+              const active = currentPath === item.path;
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => onNavigate(item.path)}
+                  className={`nav-pill ${active ? "nav-pill-active" : ""}`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
         <div className="flex items-center gap-2">
-          {configured && sources.length > 1 ? (
+          {hasData && sources.length > 1 ? (
             <select
               value={activeSource ?? ""}
               onChange={(e) => onSourceChange(e.target.value || undefined)}
@@ -99,7 +92,7 @@ export function Header({
                 </option>
               ))}
             </select>
-          ) : configured && sources.length === 1 && sources[0] ? (
+          ) : hasData && sources.length === 1 && sources[0] ? (
             <span
               className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-2)] px-3 py-1.5 text-sm font-medium"
               style={{ color: "var(--text-secondary)" }}
@@ -108,7 +101,7 @@ export function Header({
             </span>
           ) : null}
 
-          {configured ? (
+          {hasData ? (
             <div className="theme-toggle">
               <button
                 type="button"
@@ -152,7 +145,7 @@ export function Header({
           <button
             type="button"
             onClick={onRefresh}
-            disabled={!configured || refreshing}
+            disabled={!hasData || refreshing}
             className="button-secondary rounded-full px-4 py-2 text-sm"
           >
             {refreshing ? "Refreshing..." : "Refresh"}

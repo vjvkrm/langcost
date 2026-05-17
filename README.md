@@ -117,6 +117,8 @@ langcost scan --source claude-code --force
 
 LangCost uses a plugin architecture — adapters translate agent-specific data into a normalized format the analysis engine understands. Install only the adapters you need.
 
+> **Full reference — install/scan/uninstall commands, default source paths, and adapter-specific flags:** [ADAPTERS.md](./ADAPTERS.md).
+
 | Adapter | Install | Source | What it reads |
 |---------|---------|--------|---------------|
 | **Claude Code** | `@langcost/adapter-claude-code` | `~/.claude/projects/` | JSONL session logs from the Claude Code CLI |
@@ -277,7 +279,7 @@ Using a self-hosted or unlisted model? Costs show as $0 but all token counts and
 
 - Everything runs **locally** — no cloud, no API keys, no tracking
 - Data stays in a **single SQLite file** on your machine
-- Keeps the **500 most recent sessions** to manage disk space
+- Keeps the **500 most recent sessions** in the DB to manage disk space — older sessions are pruned after each scan. Scans only ever read the **last 180 days** of history (CLI and dashboard alike); use `--since` for a shorter window (e.g. `--since 30d`) to speed up syncs on large histories.
 - **Plugin architecture** — adapters handle ingestion, analyzers handle intelligence, they never touch each other
 
 <br/>
