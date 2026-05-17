@@ -209,7 +209,7 @@
     "excludeTypeOnlyImports": true
   },
   "_meta": {
-    "generatedAt": "2026-05-17T15:10:58.327Z",
+    "generatedAt": "2026-05-17T17:23:17.089Z",
     "lastModifiedBy": "kk_init",
     "projectName": "langcost"
   },
@@ -217,6 +217,7 @@
     "packages/core/src/index.ts",
     "packages/cli/src/types.ts",
     "packages/adapter-codex/src/index.ts",
-    "packages/adapter-codex/src/types.ts"
+    "packages/adapter-codex/src/types.ts",
+    "scripts/release.ts"
   ]
 }
