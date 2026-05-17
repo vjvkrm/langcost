@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   type AdapterStatus,
-  type InstalledAdapter,
-  type MissingAdapter,
   getAdapters,
+  type InstalledAdapter,
   installAdapter,
+  type MissingAdapter,
   triggerScan,
   uninstallAdapter,
 } from "../api/client";
@@ -33,7 +33,7 @@ export function Settings({ onShellRefresh }: SettingsProps) {
   const [listError, setListError] = useState<string | null>(null);
   const [rowState, setRowState] = useState<Record<string, RowState>>({});
 
-  async function loadAdapters() {
+  const loadAdapters = useCallback(async () => {
     setListError(null);
     try {
       const response = await getAdapters();
@@ -41,11 +41,11 @@ export function Settings({ onShellRefresh }: SettingsProps) {
     } catch (cause) {
       setListError(cause instanceof Error ? cause.message : "Failed to load adapters.");
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadAdapters();
-  }, []);
+  }, [loadAdapters]);
 
   function setRow(name: string, next: Partial<RowState>) {
     setRowState((current) => ({
@@ -135,7 +135,11 @@ export function Settings({ onShellRefresh }: SettingsProps) {
               </a>
             </p>
           </div>
-          <button type="button" onClick={() => void loadAdapters()} className="button-ghost text-xs">
+          <button
+            type="button"
+            onClick={() => void loadAdapters()}
+            className="button-ghost text-xs"
+          >
             Refresh list
           </button>
         </div>

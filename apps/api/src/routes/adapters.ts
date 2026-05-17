@@ -1,10 +1,7 @@
 import { createTraceRepository } from "@langcost/db";
 import { Hono } from "hono";
 
-import {
-  type AdapterInstallType,
-  tryLoadAdapterWithSource,
-} from "../lib/adapter-loader";
+import { type AdapterInstallType, tryLoadAdapterWithSource } from "../lib/adapter-loader";
 import { installAdapterPackage, uninstallAdapterPackage } from "../lib/adapter-package";
 import { withDb } from "../lib/db";
 

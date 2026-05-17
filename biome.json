@@ -14,7 +14,14 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/dist", "!**/coverage", "!**/node_modules", "!packages/cli/dashboard"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/coverage",
+      "!**/node_modules",
+      "!packages/cli/dashboard",
+      "!.kodeklarity"
+    ]
   },
   "css": {
     "parser": {

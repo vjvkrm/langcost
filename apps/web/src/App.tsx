@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getSources, type SourceInfo, triggerScan } from "./api/client";
 import { Header } from "./components/layout/Header";
@@ -153,13 +153,13 @@ export default function App() {
   const route = useMemo(() => parseRoute(pathname), [pathname]);
   const activePath = route.page === "trace" || route.page === "traces" ? "/" : pathname;
 
-  function navigate(path: string) {
+  const navigate = useCallback((path: string) => {
     if (window.location.pathname !== path) {
       window.history.pushState({}, "", path);
     }
 
     setPathname(path);
-  }
+  }, []);
 
   useEffect(() => {
     if (loadingShell) return;
@@ -168,7 +168,7 @@ export default function App() {
     if (pathname === "/" || pathname === "/overview") {
       navigate("/settings");
     }
-  }, [loadingShell, hasData, pathname]);
+  }, [loadingShell, hasData, pathname, navigate]);
 
   async function handleRefresh() {
     if (!hasData || !activeSource) {
@@ -181,7 +181,9 @@ export default function App() {
     try {
       const result = await triggerScan(false, activeSource);
       await reloadShell();
-      setBanner(`Refresh complete. Ingested ${result.tracesIngested} new traces from ${activeSource}.`);
+      setBanner(
+        `Refresh complete. Ingested ${result.tracesIngested} new traces from ${activeSource}.`,
+      );
       setBannerTone("info");
     } catch (cause) {
       setBanner(cause instanceof Error ? cause.message : "Refresh failed.");
